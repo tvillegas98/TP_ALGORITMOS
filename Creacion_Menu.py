@@ -1,8 +1,8 @@
-import json
 import requests
 from geopy.distance import geodesic #Medir distancias
 from geopy.geocoders import Nominatim #Geolocalización
 geolocator = Nominatim(user_agent="TP_ALGORITMOS")
+
 
 PROVINCIAS = {
         "BA": "Buenos Aires", "CA": "Catamarca", "CH":"Chubut",
@@ -24,9 +24,9 @@ def verificar_conexiones():
     try:
         respuesta_uno = requests.get("https://ws.smn.gob.ar/map_items/weather", timeout = 1)
         respuesta_dos = requests.get("https://ws.smn.gob.ar/alerts/type/AL", timeout = 1)
-        respuesta_cuatro = requests.get("https://ws.smn.gob.ar/map_items/forecast/1", timeout = 1)
+        respuesta_tres = requests.get("https://ws.smn.gob.ar/map_items/forecast/1", timeout = 1)
         respuesta_cuatro = requests.get("https://ws.smn.gob.ar/map_items/forecast/2", timeout = 1)
-        respuesta_cuatro = requests.get("https://ws.smn.gob.ar/map_items/forecast/3", timeout = 1)
+        respuesta_cinco = requests.get("https://ws.smn.gob.ar/map_items/forecast/3", timeout = 1)
         return False
     except requests.exceptions.Timeout:
         print("Lo lamento, no se pudo conectar con el servicio metereológico nacional...")
@@ -80,7 +80,7 @@ def verificar_ciudad(respuesta_json, ubicacion_usuario):
     '''
     ciudad_encontrada = False
     for diccionario in respuesta_json:
-        if(diccionario["name"] == ubicacion_usuario["Ciudad"] and ciudad_encontrada == False):
+        if(ubicacion_usuario["Ciudad"] in str(diccionario["name"])  and ciudad_encontrada == False):
             ciudad_encontrada = True
     return ciudad_encontrada
 
@@ -104,15 +104,26 @@ def mostrar_pronostico_provincia(respuesta_json, provincia):
             print("-"*80)
             contador += 1
 
-def mostrar_pronostico_ciudad(respuesta_json, ciudad):
+def mostrar_pronostico_ciudad(respuesta_json, ciudad, provincia):
     '''
         Pre:Recibe los datos json de la url weather y la ciudad del usuario
         Post: Muestra el pronóstico de la ciudad del usuario, debido a que fue encontrada en los datos json
     '''
     for diccionarios in respuesta_json:
-        if(diccionarios['name'] == ciudad):
+        if(ciudad == diccionarios['name'] and provincia == diccionarios['province']):
             print("-"*80)
             print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO DE LA CIUDAD DE: {ciudad}")
+            print("-"*80)
+            print(f"Fecha y Hora: {diccionarios['forecast']['date_time']}")
+            print(f"Temperatura mínima: {diccionarios['forecast']['forecast']['0']['temp_min']}°C \nTemperatura máxima: {diccionarios['forecast']['forecast']['0']['temp_max']}°C")
+            print(f"Humedad: {diccionarios['weather']['humidity']}% \nVelocidad del viento: {diccionarios['weather']['wind_speed']} km/h")
+            print(f"Pronóstico de la mañana: {diccionarios['forecast']['forecast']['0']['morning']['description']}")
+            print(f"Pronóstico de la tarde: {diccionarios['forecast']['forecast']['0']['afternoon']['description']}\n")
+            print("-"*80)
+        elif(ciudad in diccionarios['name'] and provincia == diccionarios['province']):
+            print("-"*80)
+            print(f"No sé encontro la ciudad exacta pero lo más parecido es la ciudad de {diccionarios['name']} ")
+            print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO DE LA CIUDAD DE: {diccionarios['name']}")
             print("-"*80)
             print(f"Fecha y Hora: {diccionarios['forecast']['date_time']}")
             print(f"Temperatura mínima: {diccionarios['forecast']['forecast']['0']['temp_min']}°C \nTemperatura máxima: {diccionarios['forecast']['forecast']['0']['temp_max']}°C")
@@ -133,7 +144,7 @@ def pronostico_usuario(ubicacion_usuario):
     if(ciudad_verificada == False):
         mostrar_pronostico_provincia(respuesta_json, ubicacion_usuario['Provincia'])
     else:
-        mostrar_pronostico_ciudad(respuesta_json, ubicacion_usuario['Ciudad'])
+        mostrar_pronostico_ciudad(respuesta_json, ubicacion_usuario['Ciudad'], ubicacion_usuario['Provincia'])
 
 def alertas_nacionales():
     '''
@@ -141,7 +152,7 @@ def alertas_nacionales():
         Post:Niguno, muestra las alertas a nivel nacional
     '''
     print("Conectando...")
-    respuesta_json = requests.get("https://ws.smn.gob.ar/alerts/type/AL")
+    respuesta_json = requests.get("https://ws.smn.gob.ar/alerts/type/AL") 
     respuesta_json = respuesta_json.json()
     contador = 1
     print("-"*80)
@@ -153,7 +164,7 @@ def alertas_nacionales():
         print(f"AVISO NÚMERO°{contador}")
         print("-"*80)
         print(f"Titulo: {alertas['title']} \nFecha: {alertas['date']} \nHora: {alertas['hour']}")
-        print(f"Aviso: {alertas['description']} \n Zonas afectadas: {zonas}")
+        print(f"Aviso: {alertas['description']} \n Zonas afectadas: {zonas[0::]}")
         print("-"*80)
         contador += 1
 
