@@ -63,7 +63,8 @@ def ciudad_en_mayusculas():
     entrada_lista = entrada.split()
 
     for i in range(len(entrada_lista)):
-        entrada_lista[i] = (str(entrada_lista[i]).capitalize())
+        if entrada_lista[i] not in ['de', 'del']:
+            entrada_lista[i] = (str(entrada_lista[i]).capitalize())
 
     salida = " ".join(entrada_lista)
     return salida
