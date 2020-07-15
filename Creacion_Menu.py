@@ -1,7 +1,8 @@
 import requests
 from geopy.distance import geodesic #Medir distancias
-from geopy.geocoders import Nominatim #Geolocalizaciónkk
+from geopy.geocoders import Nominatim #Geolocalización
 geolocator = Nominatim(user_agent="TP_ALGORITMOS")
+
 
 PROVINCIAS = {
         "BA": "Buenos Aires", "CA": "Catamarca", "CH":"Chubut",
@@ -10,7 +11,7 @@ PROVINCIAS = {
         "MZ": "Mendoza", "MI":"Misiones", "NQ":"Neuquén", "RN":"Río Negro",
         "SA":"Salta", "SJ":"San Juan", "SL":"San Luis", "SC":"Santa Cruz",
         "SF":"Santa Fe", "SE":"Santiago del Estero", 
-        "TF":"Tierra del fuego, Antártida e Islas del Atlántico Sur", 
+        "TF":"Tierra del Fuego, Antártida e Islas del Atlántico Sur", 
         "TU":"Tucumán"
         }
 
@@ -54,18 +55,16 @@ def ubicar_provincia(mensaje_determinado):
     provincia = PROVINCIAS[caracteres_provincia]
     return provincia
 
-def ciudad_en_mayusculas():
+def ciudad_en_mayusculas(mensaje_determinado):
     """
         PRE: No recibe argumentos, la fucion pide el ingrese de una ciudad.
         Post: Devuelve el nombre de la ciudad en mayúsculas.
     """
-    entrada = input('Ingrese el nombre de la ciudad: ')
+    entrada = input(mensaje_determinado)
     entrada_lista = entrada.split()
-
     for i in range(len(entrada_lista)):
         if entrada_lista[i] not in ['de', 'del']:
             entrada_lista[i] = (str(entrada_lista[i]).capitalize())
-
     salida = " ".join(entrada_lista)
     return salida
 
@@ -76,10 +75,10 @@ def hallar_al_usuario():
     '''
     ubicacion_ingresada = False
     while(ubicacion_ingresada == False):
-        print("A continuación ingrese la ubicación desde la cuál está usando nuestra aplicación, primero la abreviación de su provincia y luego su ciudad\n")
+        print("A continuación ingrese la ubicación desde la cuál está usando nuestra aplicación, primero la abreviación de su provincia y luego su ciudad")
         provincia_usuario = ubicar_provincia("Ingrese la abreviación de su provincia \nEjemplo: Buenos Aires se abrevia como BA, Catamarca como CA. \nIngrese aquí: ")
-        ciudad_usuario = ciudad_en_mayusculas()
-        print(f"\n¿Ústed está en la ciudad de {ciudad_usuario} en la provincia de {provincia_usuario}?\n 1.Si \n 2.No")
+        ciudad_usuario = ciudad_en_mayusculas("Ingrese el nombre de la ciudad: ")
+        print(f"¿Ústed está en la ciudad de {ciudad_usuario} en la provincia de {provincia_usuario}?\n 1.Si \n 2.No")
         opcion = validar_entrada(2)
         if(opcion == 1):
             ubicacion_ingresada = True
@@ -94,7 +93,7 @@ def verificar_ciudad(respuesta_json, ubicacion_usuario):
     '''
     ciudad_encontrada = False
     for diccionario in respuesta_json:
-        if(ubicacion_usuario["Ciudad"] in str(diccionario["name"])  and ciudad_encontrada == False):
+        if(ubicacion_usuario["Ciudad"] in diccionario["name"] and ciudad_encontrada == False):
             ciudad_encontrada = True
     return ciudad_encontrada
 
@@ -105,9 +104,8 @@ def mostrar_pronostico_provincia(respuesta_json, provincia):
     '''
     contador = 1
     print("La ciudad no pudo ser encontrada en la base de datos del servicio metereológico, a continuación mostraremos las ciudades más cercanas")
-
     for diccionarios in respuesta_json:
-        if(diccionarios['province'] == provincia):
+        if(diccionarios['province'] == provincia and len(respuesta_json)!= 0):
             print("-"*80)
             print(f"AVISOS A NIVEL PROVINCIAL. \n AVISO NÚMERO #{contador}")
             print("-"*80)
@@ -152,11 +150,10 @@ def pronostico_usuario(ubicacion_usuario):
         Pre: Recibe el diccionario con la ubicación del usuario
         Post: Ninguno, sigue una serie de procesos para mostrar el pronóstico de la locación del usuario
     '''
-    print("Conectando...\n")
+    print("Conectando...")
     respuesta_json = requests.get("https://ws.smn.gob.ar/map_items/weather")
     respuesta_json = respuesta_json.json()
     ciudad_verificada = verificar_ciudad(respuesta_json, ubicacion_usuario)
-
     if(ciudad_verificada == False):
         mostrar_pronostico_provincia(respuesta_json, ubicacion_usuario['Provincia'])
     else:
@@ -171,18 +168,23 @@ def alertas_nacionales():
     respuesta_json = requests.get("https://ws.smn.gob.ar/alerts/type/AL") 
     respuesta_json = respuesta_json.json()
     contador = 1
-    print("-"*80)
-    print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO A NIVEL NACIONAL")
-    print("-"*80)
-    for alertas in respuesta_json:
-        zonas = [zona for zona in alertas['zones'].values()]
+    if(len(respuesta_json) != 0):
         print("-"*80)
-        print(f"AVISO NÚMERO°{contador}")
+        print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO A NIVEL NACIONAL")
         print("-"*80)
-        print(f"Titulo: {alertas['title']} \nFecha: {alertas['date']} \nHora: {alertas['hour']}")
-        print(f"Aviso: {alertas['description']} \n Zonas afectadas: {zonas[0::]}")
-        print("-"*80)
-        contador += 1
+        for alertas in respuesta_json:
+            zonas = [zona for zona in alertas['zones'].values()]
+            print("-"*80)
+            print(f"AVISO NÚMERO°{contador}")
+            print("-"*80)
+            print(f"Titulo: {alertas['title']} \nFecha: {alertas['date']} \nHora: {alertas['hour']}")
+            print(f"Aviso: {alertas['description']} \n Zonas afectadas: {zonas[0::]}")
+            print("-"*80)
+            contador += 1
+    else:
+        print("-"*80, "\n")
+        print("NO HAY ALERTAS ACTUALES")
+        print("-"*80, "\n")
 
 def menu_de_acciones(opcion, ubicacion_usuario):
     '''
@@ -194,6 +196,8 @@ def menu_de_acciones(opcion, ubicacion_usuario):
     elif(opcion == 2):
         pass
     elif(opcion == 3):
+        alertas_nacionales()
+    elif(opcion == 4):
         pass
     elif(opcion == 5):
         pass
@@ -205,11 +209,10 @@ def main():
         Muestra el menú principal
         El programa termina si el usuario ingresa la opción número 7.
     '''
-    print("\n¡Bienvenidos a la aplicación del servicio metereológico de Tormenta!\n")
+    print("¡Bienvenidos a la aplicación del servicio metereológico de Tormenta!")
     ubicacion_usuario = hallar_al_usuario()
-    print("Conectando... \n")
+    print("Conectando... ")
     cerrar_menu = verificar_conexiones()
-
     while(cerrar_menu == False):
         print("¿Que desea hacer?")
         print("1.Ver el pronóstico para su ciudad(En caso de no haber para su ciudad, se mostrarán las ciudades mas cercanas)")
@@ -218,7 +221,6 @@ def main():
         print("4.Graficar el archivo CSV ingresado")
         print("5.Pronóstico extendido de 1,2 y 3 días de una ciudad ingresada por el usuario \n6.Informe de precipitaciones mediante analisis de imagenes de radar")
         print("7.Cerrar el programa\n")
-
         opcion = validar_entrada(7)
         if(opcion == 7):
             cerrar_menu = True
