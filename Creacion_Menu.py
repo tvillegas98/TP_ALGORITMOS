@@ -26,17 +26,19 @@ def verificar_conexion(ruta):
         Post: Retorna un diccionario con un valor booleano en función de si hubo una conexión exitosa o no, y, la respuesta.    
     '''
     print("Conectando...")
+    respuesta = None
+    valor = False
 
     try:
         respuesta = requests.get(ruta, timeout = 1)
         valor = True
     except requests.exceptions.Timeout:
-        print("Lo lamento, no se pudo conectar con el servicio metereológico nacional...")
-        respuesta = None
-        valor = False
+        print("Error. La conexión tardo demasiado...  ")
+    except requests.exceptions.ConnectionError: 
+        print('Error de conexión, revise su conexión de internet.')
 
-    respuesta = {'respuesta': respuesta, 'conexion': valor}
-    return respuesta
+    diccionario_respuesta = {'respuesta': respuesta, 'conexion': valor}
+    return diccionario_respuesta
 
 def validar_entrada(numero_opciones):
     '''
@@ -166,6 +168,8 @@ def pronostico_usuario(ubicacion_usuario):
             mostrar_pronostico_provincia(respuesta_json, ubicacion_usuario['Provincia'])
         else:
             mostrar_pronostico_ciudad(respuesta_json, ubicacion_usuario['Ciudad'], ubicacion_usuario['Provincia'])
+    else:
+        print('No se pudo establecer conexion con el Servicio Meteorológico Nacional.')
 
 def alertas_nacionales():
     '''
