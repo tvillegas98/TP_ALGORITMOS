@@ -15,22 +15,28 @@ PROVINCIAS = {
         "TU":"Tucumán"
         }
 
-def verificar_conexiones():
+        #respuesta_uno = requests.get("https://ws.smn.gob.ar/map_items/weather", timeout = 1)
+        #respuesta_dos = requests.get("https://ws.smn.gob.ar/alerts/type/AL", timeout = 1)
+        #respuesta_tres = requests.get("https://ws.smn.gob.ar/map_items/forecast/1", timeout = 1)
+        #respuesta_cuatro = requests.get("https://ws.smn.gob.ar/map_items/forecast/2", timeout = 1)
+        #respuesta_cinco = requests.get("https://ws.smn.gob.ar/map_items/forecast/3", timeout = 1)
+def verificar_conexion(ruta):
     '''
-        Pre:Verifico la conexión a internet mediante un try y except
-        Post:Luego retorna un valor booleano en función de si hubo una conexión exitosa o no    
+        Pre: Recibe la ruta, verifica la conexión a internet mediante un try y except
+        Post: Retorna un diccionario con un valor booleano en función de si hubo una conexión exitosa o no, y, la respuesta.    
     '''
+    print("Conectando...")
 
     try:
-        respuesta_uno = requests.get("https://ws.smn.gob.ar/map_items/weather", timeout = 1)
-        respuesta_dos = requests.get("https://ws.smn.gob.ar/alerts/type/AL", timeout = 1)
-        respuesta_tres = requests.get("https://ws.smn.gob.ar/map_items/forecast/1", timeout = 1)
-        respuesta_cuatro = requests.get("https://ws.smn.gob.ar/map_items/forecast/2", timeout = 1)
-        respuesta_cinco = requests.get("https://ws.smn.gob.ar/map_items/forecast/3", timeout = 1)
-        return False
+        respuesta = requests.get(ruta, timeout = 1)
+        valor = True
     except requests.exceptions.Timeout:
         print("Lo lamento, no se pudo conectar con el servicio metereológico nacional...")
-        return True
+        respuesta = None
+        valor = False
+
+    respuesta = {'respuesta': respuesta, 'conexion': valor}
+    return respuesta
 
 def validar_entrada(numero_opciones):
     '''
@@ -57,7 +63,7 @@ def ubicar_provincia(mensaje_determinado):
 
 def ciudad_en_mayusculas(mensaje_determinado):
     """
-        PRE: No recibe argumentos, la fucion pide el ingrese de una ciudad.
+        PRE: Recibe un mensaje para mostrar por pantalla, la fucion pide el ingrese de una ciudad.
         Post: Devuelve el nombre de la ciudad en mayúsculas.
     """
     entrada = input(mensaje_determinado)
@@ -150,14 +156,16 @@ def pronostico_usuario(ubicacion_usuario):
         Pre: Recibe el diccionario con la ubicación del usuario
         Post: Ninguno, sigue una serie de procesos para mostrar el pronóstico de la locación del usuario
     '''
-    print("Conectando...")
-    respuesta_json = requests.get("https://ws.smn.gob.ar/map_items/weather")
-    respuesta_json = respuesta_json.json()
-    ciudad_verificada = verificar_ciudad(respuesta_json, ubicacion_usuario)
-    if(ciudad_verificada == False):
-        mostrar_pronostico_provincia(respuesta_json, ubicacion_usuario['Provincia'])
-    else:
-        mostrar_pronostico_ciudad(respuesta_json, ubicacion_usuario['Ciudad'], ubicacion_usuario['Provincia'])
+    conexion = verificar_conexion("https://ws.smn.gob.ar/map_items/weather") 
+    conexion_exitosa = conexion['conexion']
+
+    if conexion_exitosa == True:
+        respuesta_json = conexion['respuesta'].json()
+        ciudad_verificada = verificar_ciudad(respuesta_json, ubicacion_usuario)
+        if(ciudad_verificada == False):
+            mostrar_pronostico_provincia(respuesta_json, ubicacion_usuario['Provincia'])
+        else:
+            mostrar_pronostico_ciudad(respuesta_json, ubicacion_usuario['Ciudad'], ubicacion_usuario['Provincia'])
 
 def alertas_nacionales():
     '''
@@ -209,22 +217,42 @@ def main():
         Muestra el menú principal
         El programa termina si el usuario ingresa la opción número 7.
     '''
-    print("¡Bienvenidos a la aplicación del servicio metereológico de Tormenta!")
-    ubicacion_usuario = hallar_al_usuario()
-    print("Conectando... ")
-    cerrar_menu = verificar_conexiones()
-    while(cerrar_menu == False):
-        print("¿Que desea hacer?")
-        print("1.Ver el pronóstico para su ciudad(En caso de no haber para su ciudad, se mostrarán las ciudades mas cercanas)")
-        print("2.Ver el pronóstico de una ciudad ubicada por geolocalización")
-        print("3.Listar las alertas a nivel Nacional") 
-        print("4.Graficar el archivo CSV ingresado")
-        print("5.Pronóstico extendido de 1,2 y 3 días de una ciudad ingresada por el usuario \n6.Informe de precipitaciones mediante analisis de imagenes de radar")
-        print("7.Cerrar el programa\n")
-        opcion = validar_entrada(7)
-        if(opcion == 7):
-            cerrar_menu = True
-            print("¡Hasta la próxima!")
+    print("\n¡Bienvenidos a la aplicación del servicio metereológico de Tormenta!\n")
+    cerrar_programa = False
+
+    while cerrar_programa == False:
+        ubicacion_usuario = hallar_al_usuario()
+        cerrar_menu = False
+
+        while(cerrar_menu == False):
+            print("\n¿Que desea hacer?")
+            print("1.Ver el pronóstico para su ciudad(En caso de no haber para su ciudad, se mostrarán las ciudades mas cercanas)")
+            print("2.Ver el pronóstico de una ciudad ubicada por geolocalización")
+            print("3.Listar las alertas a nivel Nacional") 
+            print("4.Graficar el archivo CSV ingresado")
+            print("5.Pronóstico extendido de 1,2 y 3 días de una ciudad ingresada por el usuario")
+            print("6.Informe de precipitaciones mediante analisis de imagenes de radar")
+            print("7.Cambiar su ubicación")
+            print("8.Cerrar el programa\n")
+            opcion = validar_entrada(8)
+            if opcion != 7 and opcion != 8:
+                menu_de_acciones(opcion,ubicacion_usuario)
+                cerrar_menu = False
+            elif opcion == 7 or opcion == 8:
+                cerrar_menu = True
+
+        if opcion == 8:
+            cerrar_programa = True
         else:
-            menu_de_acciones(opcion,ubicacion_usuario)
+            cerrar_programa = False
+    print('Fin del programa\nHasta la proxima!')
 main()
+
+
+
+
+
+
+
+
+
