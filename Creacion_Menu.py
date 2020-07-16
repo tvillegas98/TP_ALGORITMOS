@@ -197,6 +197,58 @@ def alertas_nacionales():
         print("-"*80, "\n")
         print("NO HAY ALERTAS ACTUALES")
         print("-"*80, "\n")
+def mostrar_pronostico_extendido_ciudad(respuesta_json, ciudad, provincia, dia_pronostico):
+    '''
+        Pre:Recibe los datos json de la url de pronosticos extendidos, la ciudad del usuario y el nuemero de dias desde la fecha.
+        Post: Muestra el pronostico extendido de la ciudad del usuario, debido a que fue encontrada en los datos json
+    '''
+    for diccionario in respuesta_json:
+        if(ciudad == diccionario['name'] and provincia == diccionario['province']):
+            print("-"*80)
+            print(f"PRONÓSTICO PARA DENTRO DE {dia_pronostico} DÍAS DE LA CIUDAD DE: {ciudad}")
+            print("-"*80)
+            print(f'MAÑANA:\nTemperatura: {diccionario["weather"]["morning_temp"]}°C\nDescripción: {diccionario["weather"]["morning_desc"]}')
+            print(f'TARDE:\nTemperatura: {diccionario["weather"]["afternoon_temp"]}°C\nDescripción: {diccionario["weather"]["afternoon_desc"]}')
+            print("-"*80,'\n')
+        elif(ciudad in diccionario['name'] and provincia == diccionario['province']):
+            print("-"*80)
+            print(f"No sé encontro la ciudad exacta pero lo más parecido es la ciudad de {diccionarios['name']} ")
+            print(f"PRONÓSTICO PARA DENTRO DE {dia_pronostico} DÍAS DE LA CIUDAD DE: {ciudad}")
+            print("-"*80)
+            print(f'MAÑANA:\nTemperatura: {diccionario["weather"]["morning_temp"]}\nDescripción: {diccionario["weather"]["morning_desc"]}')
+            print(f'TARDE:\nTemperatura: {diccionario["weather"]["afternoon_temp"]}\nDescripción: {diccionario["weather"]["afternoon_desc"]}')
+            print("-"*80,'\n')
+
+
+def pronostico_extendido(ubicacion_usuario):
+    '''
+        Pre: Recibe el diccionario con la ubicación del usuario
+        Post: Ninguno, sigue una serie de procesos para mostrar el pronóstico extendido de la locación del usuario
+    '''
+    pronosticos = {
+                    'dia1': "https://ws.smn.gob.ar/map_items/forecast/1", 
+                    'dia2': "https://ws.smn.gob.ar/map_items/forecast/2", 
+                    'dia3': "https://ws.smn.gob.ar/map_items/forecast/3"
+                  }
+
+    contador = 1
+    for ruta in pronosticos:
+        conexion = verificar_conexion(pronosticos[ruta]) 
+        conexion_exitosa = conexion['conexion']
+
+        if conexion_exitosa == True:
+            respuesta_json = conexion['respuesta'].json()
+            ciudad_verificada = verificar_ciudad(respuesta_json, ubicacion_usuario)
+
+            if ciudad_verificada == False:
+                print(f'No hay información disponible para {ubicacion_usuario["Ciudad"]}')
+            else:
+                mostrar_pronostico_extendido_ciudad(respuesta_json, ubicacion_usuario['Ciudad'], ubicacion_usuario['Provincia'], contador)
+
+        else:
+            print(f'Fallo la conexión para el pronóstico de dentro de {contador} días')
+
+        contador += 1
 
 def menu_de_acciones(opcion, ubicacion_usuario):
     '''
@@ -212,7 +264,7 @@ def menu_de_acciones(opcion, ubicacion_usuario):
     elif(opcion == 4):
         pass
     elif(opcion == 5):
-        pass
+        pronostico_extendido(ubicacion_usuario)
     elif(opcion == 6):
         pass
 
@@ -225,10 +277,10 @@ def main():
     cerrar_programa = False
 
     while cerrar_programa == False:
-        ubicacion_usuario = hallar_al_usuario()
         cerrar_menu = False
+        ubicacion_usuario = hallar_al_usuario()
 
-        while(cerrar_menu == False):
+        while cerrar_menu == False:
             print("\n¿Que desea hacer?")
             print("1.Ver el pronóstico para su ciudad(En caso de no haber para su ciudad, se mostrarán las ciudades mas cercanas)")
             print("2.Ver el pronóstico de una ciudad ubicada por geolocalización")
@@ -239,11 +291,14 @@ def main():
             print("7.Cambiar su ubicación")
             print("8.Cerrar el programa\n")
             opcion = validar_entrada(8)
-            if opcion != 7 and opcion != 8:
+
+            if opcion == 7 or opcion == 8:
+                cerrar_menu = True
+            elif  opcion == 4:
+                print('Graficos')
+            else:
                 menu_de_acciones(opcion,ubicacion_usuario)
                 cerrar_menu = False
-            elif opcion == 7 or opcion == 8:
-                cerrar_menu = True
 
         if opcion == 8:
             cerrar_programa = True
