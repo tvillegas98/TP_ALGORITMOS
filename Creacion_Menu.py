@@ -20,6 +20,7 @@ PROVINCIAS = {
         #respuesta_tres = requests.get("https://ws.smn.gob.ar/map_items/forecast/1", timeout = 1)
         #respuesta_cuatro = requests.get("https://ws.smn.gob.ar/map_items/forecast/2", timeout = 1)
         #respuesta_cinco = requests.get("https://ws.smn.gob.ar/map_items/forecast/3", timeout = 1)
+
 def verificar_conexion(ruta):
     '''
         Pre: Recibe la ruta, verifica la conexión a internet mediante un try y except
@@ -164,6 +165,7 @@ def pronostico_usuario(ubicacion_usuario):
     if conexion_exitosa == True:
         respuesta_json = conexion['respuesta'].json()
         ciudad_verificada = verificar_ciudad(respuesta_json, ubicacion_usuario)
+
         if(ciudad_verificada == False):
             mostrar_pronostico_provincia(respuesta_json, ubicacion_usuario['Provincia'])
         else:
@@ -176,27 +178,34 @@ def alertas_nacionales():
         Pre:Ninguno, primero recibe los datos de la url indicada en el modulo y luego las muestra
         Post:Niguno, muestra las alertas a nivel nacional
     '''
-    print("Conectando...")
-    respuesta_json = requests.get("https://ws.smn.gob.ar/alerts/type/AL") 
-    respuesta_json = respuesta_json.json()
-    contador = 1
-    if(len(respuesta_json) != 0):
-        print("-"*80)
-        print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO A NIVEL NACIONAL")
-        print("-"*80)
-        for alertas in respuesta_json:
-            zonas = [zona for zona in alertas['zones'].values()]
+    conexion = verificar_conexion("https://ws.smn.gob.ar/alerts/type/AL") 
+    conexion_exitosa= conexion['conexion']
+    
+    if conexion_exitosa == True:
+        respuesta_json = conexion['respuesta'].json()
+        contador = 1
+
+        if len(respuesta_json) != 0:
             print("-"*80)
-            print(f"AVISO NÚMERO°{contador}")
+            print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO A NIVEL NACIONAL")
             print("-"*80)
-            print(f"Titulo: {alertas['title']} \nFecha: {alertas['date']} \nHora: {alertas['hour']}")
-            print(f"Aviso: {alertas['description']} \n Zonas afectadas: {zonas[0::]}")
-            print("-"*80)
-            contador += 1
+            for alertas in respuesta_json:
+                zonas = [zona for zona in alertas['zones'].values()]
+                print("-"*80)
+                print(f"AVISO NÚMERO°{contador}")
+                print("-"*80)
+                print(f"Titulo: {alertas['title']} \nFecha: {alertas['date']} \nHora: {alertas['hour']}")
+                print(f"Aviso: {alertas['description']} \n Zonas afectadas: {zonas[0::]}")
+                print("-"*80)
+                contador += 1
+        else:
+            print("-"*80, "\n")
+            print("NO HAY ALERTAS ACTUALES")
+            print("-"*80, "\n")
+
     else:
-        print("-"*80, "\n")
-        print("NO HAY ALERTAS ACTUALES")
-        print("-"*80, "\n")
+        print('No se pudo establecer conexion con el Servicio Meteorológico Nacional.')
+
 def mostrar_pronostico_extendido_ciudad(respuesta_json, ciudad, provincia, dia_pronostico):
     '''
         Pre:Recibe los datos json de la url de pronosticos extendidos, la ciudad del usuario y el nuemero de dias desde la fecha.
