@@ -261,8 +261,6 @@ def menu_de_acciones(opcion, ubicacion_usuario):
         pass
     elif(opcion == 3):
         alertas_nacionales()
-    elif(opcion == 4):
-        pass
     elif(opcion == 5):
         pronostico_extendido(ubicacion_usuario)
     elif(opcion == 6):
@@ -295,7 +293,8 @@ def main():
             if opcion == 7 or opcion == 8:
                 cerrar_menu = True
             elif  opcion == 4:
-                print('Graficos')
+                #llamar a funcion de graficos
+                pass
             else:
                 menu_de_acciones(opcion,ubicacion_usuario)
                 cerrar_menu = False
