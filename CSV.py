@@ -9,70 +9,65 @@ import pandas as pd
 import requests
 import matplotlib.pyplot as plt
 
-def graficoCaracteristicas(años,datos):
-    plt.bar(años[0],datos[0], label= "Datos 2013", width=0.5, color = "blue")
-    plt.bar(años[1],datos[1], label= "Datos 2014", width=0.5, color = "orange")
-    plt.bar(años[2],datos[2], label= "Datos 2015", width=0.5, color = "black")
-    plt.bar(años[3],datos[3], label= "Datos 2016", width=0.5, color = "pink")
-    plt.bar(años[4],datos[4], label= "Datos 2017", width=0.5, color = "red")
-    
-def lluviaMaxdia(historico,maximo,busqueda,año,contador):
-    for i in range(contador, len(historico["Date"])):
-        red=historico["Date"][contador]
-        if (año in red)==False:
-            return contador
-        if historico[busqueda][contador]>maximo[0]:
-            maximo[0]=historico[busqueda][contador]
-            maximo[1]=historico["Date"][contador]
-        contador+=1
+def graficoCaracteristicasprecipitacion(años,datos):
+    plt.bar(años[0],datos[0], label= f"{datos[0]}Mm", width=0.5, color = "blue")
+    plt.bar(años[1],datos[1], label= f"{datos[1]}Mm", width=0.5, color = "orange")
+    plt.bar(años[2],datos[2], label= f"{datos[2]}Mm", width=0.5, color = "black")
+    plt.bar(años[3],datos[3], label= f"{datos[3]}Mm", width=0.5, color = "pink")
+    plt.bar(años[4],datos[4], label= f"{datos[4]}Mm", width=0.5, color = "red")    
 
-def organizadorPromedio(historico,cantidad_dias,datos):
-    for i in range (len(cantidad_dias)-1,-1,-1):
-        if i==len(cantidad_dias)-1:
-            cantidad_dias[i]=len(historico["Date"])-cantidad_dias[i-1]
-        elif i!=0:
-            cantidad_dias[i]=cantidad_dias[i]-cantidad_dias[i-1]
+def graficoCaracteristicashumedad(años,datos):
+    plt.bar(años[0],datos[0], label= f"{datos[0]}%", width=0.5, color = "blue")
+    plt.bar(años[1],datos[1], label= f"{datos[1]}%", width=0.5, color = "orange")
+    plt.bar(años[2],datos[2], label= f"{datos[2]}%", width=0.5, color = "black")
+    plt.bar(años[3],datos[3], label= f"{datos[3]}%", width=0.5, color = "pink")
+    plt.bar(años[4],datos[4], label= f"{datos[4]}%", width=0.5, color = "red")
+
+def graficoCaracteristicastemperatura(años,datos):
+    plt.bar(años[0],datos[0], label= f"{datos[0]}°C", width=0.5, color = "blue")
+    plt.bar(años[1],datos[1], label= f"{datos[1]}°C", width=0.5, color = "orange")
+    plt.bar(años[2],datos[2], label= f"{datos[2]}°C", width=0.5, color = "black")
+    plt.bar(años[3],datos[3], label= f"{datos[3]}°C", width=0.5, color = "pink")
+    plt.bar(años[4],datos[4], label= f"{datos[4]}°C", width=0.5, color = "red")
+    
+def estudioDedatosMax(años,datos,busqueda, historico):
+    fechas = [0,0,0,0,0]#Fecha en que hubo mayor temperatura y mayor milimetros de lluvia
+    for i in range(0,len(historico["Date"])):
+        read = historico["Date"][i]
+        posicion = 0
+        
+        for año in años:
+            if (año in read) == True:
+                posicion = años.index(año)
+                
+        if historico[busqueda][i]>datos[posicion]:
+            datos[posicion]=historico[busqueda][i]#temperatura o milimetros de lluvia maximo en dia
+            fechas[posicion]=historico["Date"][i]
             
+        if i==len(historico["Date"])-1:
+            for i in range(0,len(fechas)):
+                años[i]=fechas[i]
+
+def estudioDedatosProm(años,datos,busqueda,historico,cantidad_dias):
+    for i in range(0,len(historico["Date"])-1):
+        read = historico["Date"][i]
+        posicion = 0
+        for año in años:
+            if (año in read) == True:
+                posicion = años.index(año)
+        datos[posicion] += historico[busqueda][i]
+        cantidad_dias[posicion] += 1
+        
     for i in range (0,len(cantidad_dias)):
         datos[i]=datos[i]/cantidad_dias[i]
-
-def constructorDatos(historico, read,busqueda,i,año,años,datos):
-    Valor = historico[busqueda][i]
-    posicion = años.index(año)
-    datos[posicion]+=Valor
-
-def datosAnuales(años,datos,busqueda,contador,año, historico):
-    for i in range(contador,len(historico["Date"])):
-            read = historico["Date"][i]
-            if (año in read) == True:
-                constructorDatos(historico, read, busqueda,i,año, años, datos)
-                contador+=1
-            elif (año in read) == False:
-                return contador
-
-def iniciador(años,datos,busqueda, historico, cantidad_dias):
-    contador=0
-    contador1=0
-    for año in años:
-        if cantidad_dias == 1:
-            maximo=[0,0]#Primer posicion de lista es para la fecha de max lluvia y la segunda para la cantidad
-            contador = lluviaMaxdia(historico,maximo,busqueda,año,contador)
-            años[contador1]=maximo[0]
-            datos[contador1]=maximo[1]
-            contador1+=1
-        else:
-            contador = datosAnuales(años,datos,busqueda,contador,año,historico)
-        if cantidad_dias != 1:
-            cantidad_dias[contador1]=contador
-            contador1+=1        
-            
+                
 def temperaturaLluviamax(historico,busqueda):
     años = ["2013","2014","2015","2016","2017"]
     datos=[0,0,0,0,0]
+    estudioDedatosMax(años,datos,busqueda,historico)
     if busqueda=="Precipitation":
-        iniciador(años,datos,busqueda,historico,1)
         #Caractersticas del grafico
-        graficoCaracteristicas(datos,años)
+        graficoCaracteristicasprecipitacion(años,datos)
         #titulo y nombre de ejes
         plt.title("Dia Maximo en mm de lluvia")
         plt.ylabel("Mm de lluvia")
@@ -81,9 +76,8 @@ def temperaturaLluviamax(historico,busqueda):
         plt.legend()
         plt.show()
     elif busqueda == "Max Temperature" :
-        iniciador(años,datos,busqueda,historico,1)
         #Caractersticas del grafico
-        graficoCaracteristicas(datos,años)
+        graficoCaracteristicastemperatura(años,datos)
         #titulo y nombre de ejes
         plt.title("Dia con max temperatura en un año")
         plt.ylabel("Temperatura")
@@ -97,18 +91,21 @@ def temperaturaHumedad(historico,busqueda):
     años = ["2013","2014","2015","2016","2017"]
     datos=[0,0,0,0,0]
     cantidad_dias = [0,0,0,0,0]
-    iniciador(años,datos,busqueda,historico,cantidad_dias)
-    organizadorPromedio(historico,cantidad_dias, datos)
-    #Caractersticas del grafico
-    graficoCaracteristicas(años,datos)
+    estudioDedatosProm(años,datos,busqueda,historico,cantidad_dias)
+    if busqueda == "Relative Humidity":
+        datos = list(map(lambda x:x*100//1, datos))
+    #Caracteristicas del grafico
+    if busqueda == "Max Temperature":
+        graficoCaracteristicastemperatura(años,datos)
+    else:
+        graficoCaracteristicashumedad(años,datos)
     #titulo y nombre de ejes
     plt.title(f"Promedio de {busqueda}")
     plt.ylabel(busqueda)
     plt.xlabel("Año")
     #mostrar
     plt.legend()
-    plt.show()  
-
+    plt.show()   
 
 def archivocsv():
     historico = pd.read_csv("weatherdata--389-603.csv")
