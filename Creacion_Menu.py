@@ -4,6 +4,7 @@ from geopy.geocoders import Nominatim #Geolocalización
 geolocator = Nominatim(user_agent="TP_ALGORITMOS")
 
 
+#location = geolocator.geocode(ubicacion, country_codes='ar')
 PROVINCIAS = {
         "BA": "Buenos Aires", "CA": "Catamarca", "CH":"Chubut",
         "CB":"Córdoba", "CR":"Corrientes", "ER":"Entre Ríos",
@@ -71,9 +72,11 @@ def ciudad_en_mayusculas(mensaje_determinado):
     """
     entrada = input(mensaje_determinado)
     entrada_lista = entrada.split()
+
     for i in range(len(entrada_lista)):
         if entrada_lista[i] not in ['de', 'del']:
             entrada_lista[i] = (str(entrada_lista[i]).capitalize())
+
     salida = " ".join(entrada_lista)
     return salida
 
@@ -102,7 +105,7 @@ def verificar_ciudad(respuesta_json, ubicacion_usuario):
     '''
     ciudad_encontrada = False
     for diccionario in respuesta_json:
-        if(ubicacion_usuario["Ciudad"] in diccionario["name"] and ciudad_encontrada == False):
+        if ubicacion_usuario["Ciudad"] in diccionario["name"] and ciudad_encontrada == False:
             ciudad_encontrada = True
     return ciudad_encontrada
 
@@ -166,7 +169,7 @@ def pronostico_usuario(ubicacion_usuario):
         respuesta_json = conexion['respuesta'].json()
         ciudad_verificada = verificar_ciudad(respuesta_json, ubicacion_usuario)
 
-        if(ciudad_verificada == False):
+        if ciudad_verificada == False:
             mostrar_pronostico_provincia(respuesta_json, ubicacion_usuario['Provincia'])
         else:
             mostrar_pronostico_ciudad(respuesta_json, ubicacion_usuario['Ciudad'], ubicacion_usuario['Provincia'])
@@ -259,20 +262,91 @@ def pronostico_extendido(ubicacion_usuario):
 
         contador += 1
 
+def geolocalizacion_por_coordenadas():
+    """
+        Post: Devuelve la provincia de una latitud y longitud ingresadas, en caso de no exitir tal informacion, devuelve el lugar ingresado
+    """
+    print('Ingrese a continuacion las coordenadas')
+
+    latitud = input('Latitud: ')
+    longitud = input('Longitud: ')
+    coordenadas = (latitud, longitud)
+
+    coordanadas_validas = False
+    while coordanadas_validas == False:
+        try:
+            location = geolocator.reverse(coordenadas)
+            ubicacion = location.raw
+            coordanadas_validas = True
+        except ValueError:
+            print('Coordenadas invalidas, intente nuevamente')
+            latitud = input('Latitud: ')
+            longitud = input('Longitud: ')
+            coordenadas = (latitud, longitud)
+            coordanadas_validas = False
+    try:
+        provincia = ubicacion['address']['state']
+    except KeyError:
+        dic = ubicacion['address']
+        clave = (list(dic.keys()))[0]
+        provincia = dic[clave]
+    return provincia
+
+def mostrar_alertas(ubicacion_usuario):
+    '''
+        Pre: Recibe la localizacion 
+        Post: Muestra las alertas para la localizacion ingresada
+    '''
+    conexion = verificar_conexion("https://ws.smn.gob.ar/alerts/type/AL") 
+    conexion_exitosa= conexion['conexion']
+
+    if conexion_exitosa == True:
+        respuesta_json = conexion['respuesta'].json()
+        localizacion = ubicacion_usuario['Provincia']
+        terminar = False
+
+        while terminar == False:
+            contador = 1
+
+            for diccionario in respuesta_json:
+               for region in diccionario['zones']:
+                   if localizacion in diccionario['zones'][region]:
+                       print("-"*80)
+                       print(f'ALERTA NÚMERO° {contador}: {diccionario["zones"][region]}\n')
+                       print(f'Fecha: {diccionario["date"]} Hora: {diccionario["hour"]}\n')
+                       print(f'Descripción: {diccionario["description"]}\n')
+                       print("-"*80)
+                       contador += 1
+
+            if contador == 1:
+                print(f'\nNo hay alertas para {localizacion}\n')
+
+            print('1. Si desea ver alertas para otra ubicacion por geolocalización')
+            print('2. Para salir')
+            opcion = validar_entrada(2)
+            if opcion == 1:
+                localizacion = geolocalizacion_por_coordenadas()
+                terminar = False
+            else:
+                terminar = True
+            
+    else:
+        print('No se pudo establecer conexion con el Servicio Meteorológico Nacional.')
+
 def menu_de_acciones(opcion, ubicacion_usuario):
     '''
         Pre: Opcion de tipo int y ubicación del usuario
         Post: Ninguno.
     '''
-    if(opcion == 1):
+    if opcion == 1:
         pronostico_usuario(ubicacion_usuario)
-    elif(opcion == 2):
-        pass
-    elif(opcion == 3):
+    elif opcion == 2:
+        mostrar_alertas(ubicacion_usuario)
+    elif opcion == 3:
         alertas_nacionales()
-    elif(opcion == 5):
+    elif opcion == 5:
         pronostico_extendido(ubicacion_usuario)
-    elif(opcion == 6):
+    elif opcion == 6:
         pass
 
 def main():
@@ -314,7 +388,7 @@ def main():
             cerrar_programa = False
     print('Fin del programa\nHasta la proxima!')
 main()
-
+#geopy.exc.GeocoderUnavailable:
 
 
 
