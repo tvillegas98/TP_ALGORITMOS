@@ -3,7 +3,6 @@ from geopy.distance import geodesic #Medir distancias
 from geopy.geocoders import Nominatim #Geolocalización
 geolocator = Nominatim(user_agent="TP_ALGORITMOS")
 import pandas as pd
-import requests
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
@@ -192,7 +191,7 @@ def grafico_caracteristicas_temperatura(años,datos):
     plt.bar(años[3],datos[3], label= f"{datos[3]}°C", width=0.5, color = "pink")
     plt.bar(años[4],datos[4], label= f"{datos[4]}°C", width=0.5, color = "red")
     
-def estudio_de_datos_max(años,datos,busqueda, historico):
+def estudio_datos_max(años,datos,busqueda, historico):
     '''
         Pre:Recibe una lista con los años, una lista datos para colocar los maximos, una palabra para
         hacer la busqueda en el dataframe.
