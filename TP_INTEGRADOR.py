@@ -1,4 +1,5 @@
 import requests
+import geopy
 from geopy.distance import geodesic #Medir distancias
 from geopy.geocoders import Nominatim #Geolocalización
 geolocator = Nominatim(user_agent="TP_ALGORITMOS")
@@ -378,35 +379,64 @@ def pronostico_extendido(ubicacion_usuario):
 
         contador += 1
 
+def verificar_coordenadas(coordenadas):
+    """
+        Pre: Recibe una tupla con las coordenadas
+        Post: Devulve un diccionario con un booleano, segun si la conexion fue exitosa o no, y la ubicacion en forma de diccionario
+    """
+    coordanadas_validas = False
+    problemas_conexion = False
+    conexion = False
+    ubicacion = None
+    while coordanadas_validas == False and problemas_conexion == False:
+        try:
+            location = geolocator.reverse(coordenadas)
+            ubicacion = location.raw
+            conexion = True
+            coordanadas_validas = True
+            
+        except TypeError:
+            print('Direccion invalida...')
+            latitud = input("lat: ")
+            longitud = input('long: ')
+            coordenadas = (latitud, longitud)
+            coordanadas_validas = False
+        except ValueError:
+            print('Coordenadas invalidas, intente nuevamente')
+            latitud = input("lat: ")
+            longitud = input('long: ')
+            coordenadas = (latitud, longitud)
+            coordanadas_validas = False
+        except geopy.exc.GeocoderServiceError:
+            print('Fallo la conexión...')
+            problemas_conexion = True
+        
+    return {'conexion': conexion, 'ubicacion': ubicacion}
+            
 def geolocalizacion_por_coordenadas():
     """
         Post: Devuelve la provincia de una latitud y longitud ingresadas, en caso de no exitir tal informacion, devuelve el lugar ingresado
     """
     print('Ingrese a continuacion las coordenadas')
-
     latitud = input('Latitud: ')
     longitud = input('Longitud: ')
     coordenadas = (latitud, longitud)
-
-    coordanadas_validas = False
-    while coordanadas_validas == False:
+    geolocalizacion = verificar_coordenadas(coordenadas)
+    
+    if geolocalizacion['conexion'] == True:
+        ubicacion = geolocalizacion['ubicacion']
         try:
-            location = geolocator.reverse(coordenadas)
-            ubicacion = location.raw
-            coordanadas_validas = True
-        except ValueError:
-            print('Coordenadas invalidas, intente nuevamente')
-            latitud = input('Latitud: ')
-            longitud = input('Longitud: ')
-            coordenadas = (latitud, longitud)
-            coordanadas_validas = False
-    try:
-        provincia = ubicacion['address']['state']
-    except KeyError:
-        dic = ubicacion['address']
-        clave = (list(dic.keys()))[0]
-        provincia = dic[clave]
+            provincia = ubicacion['address']['state']
+        except KeyError:
+            dic = ubicacion['address']
+            clave = (list(dic.keys()))[0]
+            provincia = dic[clave]
+    else:
+        print('Error de conexion...')
+        provincia = None
+
     return provincia
+
 
 def mostrar_alertas(ubicacion_usuario):
     '''
@@ -442,7 +472,10 @@ def mostrar_alertas(ubicacion_usuario):
             opcion = validar_entrada(2)
             if opcion == 1:
                 localizacion = geolocalizacion_por_coordenadas()
-                terminar = False
+                if localizacion == None:
+                    terminar = True
+                else:
+                    terminar = False
             else:
                 terminar = True
             
@@ -504,7 +537,6 @@ def main():
             cerrar_programa = False
     print('Fin del programa\nHasta la proxima!')
 main()
-#geopy.exc.GeocoderUnavailable:
 
 
 
