@@ -9,28 +9,28 @@ import pandas as pd
 import requests
 import matplotlib.pyplot as plt
 
-def graficoCaracteristicasprecipitacion(años,datos):
+def grafico_caracteristicas_precipitacion(años,datos):
     plt.bar(años[0],datos[0], label= f"{datos[0]}Mm", width=0.5, color = "blue")
     plt.bar(años[1],datos[1], label= f"{datos[1]}Mm", width=0.5, color = "orange")
     plt.bar(años[2],datos[2], label= f"{datos[2]}Mm", width=0.5, color = "black")
     plt.bar(años[3],datos[3], label= f"{datos[3]}Mm", width=0.5, color = "pink")
     plt.bar(años[4],datos[4], label= f"{datos[4]}Mm", width=0.5, color = "red")    
 
-def graficoCaracteristicashumedad(años,datos):
+def grafico_aracteristicas_humedad(años,datos):
     plt.bar(años[0],datos[0], label= f"{datos[0]}%", width=0.5, color = "blue")
     plt.bar(años[1],datos[1], label= f"{datos[1]}%", width=0.5, color = "orange")
     plt.bar(años[2],datos[2], label= f"{datos[2]}%", width=0.5, color = "black")
     plt.bar(años[3],datos[3], label= f"{datos[3]}%", width=0.5, color = "pink")
     plt.bar(años[4],datos[4], label= f"{datos[4]}%", width=0.5, color = "red")
 
-def graficoCaracteristicastemperatura(años,datos):
+def grafico_aracteristicas_temperatura(años,datos):
     plt.bar(años[0],datos[0], label= f"{datos[0]}°C", width=0.5, color = "blue")
     plt.bar(años[1],datos[1], label= f"{datos[1]}°C", width=0.5, color = "orange")
     plt.bar(años[2],datos[2], label= f"{datos[2]}°C", width=0.5, color = "black")
     plt.bar(años[3],datos[3], label= f"{datos[3]}°C", width=0.5, color = "pink")
     plt.bar(años[4],datos[4], label= f"{datos[4]}°C", width=0.5, color = "red")
     
-def estudioDedatosMax(años,datos,busqueda, historico):
+def estudio_de_datos_max(años,datos,busqueda, historico):
     fechas = [0,0,0,0,0]#Fecha en que hubo mayor temperatura y mayor milimetros de lluvia
     for i in range(0,len(historico["Date"])):
         read = historico["Date"][i]
@@ -48,7 +48,7 @@ def estudioDedatosMax(años,datos,busqueda, historico):
             for i in range(0,len(fechas)):
                 años[i]=fechas[i]
 
-def estudioDedatosProm(años,datos,busqueda,historico,cantidad_dias):
+def estudio_datos_promedios(años,datos,busqueda,historico,cantidad_dias):
     for i in range(0,len(historico["Date"])-1):
         read = historico["Date"][i]
         posicion = 0
@@ -61,13 +61,13 @@ def estudioDedatosProm(años,datos,busqueda,historico,cantidad_dias):
     for i in range (0,len(cantidad_dias)):
         datos[i]=datos[i]/cantidad_dias[i]
                 
-def temperaturaLluviamax(historico,busqueda):
+def temperatura_lluvia_max(historico,busqueda):
     años = ["2013","2014","2015","2016","2017"]
     datos=[0,0,0,0,0]
-    estudioDedatosMax(años,datos,busqueda,historico)
+    estudio_datos_max(años,datos,busqueda,historico)
     if busqueda=="Precipitation":
         #Caractersticas del grafico
-        graficoCaracteristicasprecipitacion(años,datos)
+        grafico_caracteristicas_precipitacion(años,datos)
         #titulo y nombre de ejes
         plt.title("Dia Maximo en mm de lluvia")
         plt.ylabel("Mm de lluvia")
@@ -77,7 +77,7 @@ def temperaturaLluviamax(historico,busqueda):
         plt.show()
     elif busqueda == "Max Temperature" :
         #Caractersticas del grafico
-        graficoCaracteristicastemperatura(años,datos)
+        grafico_caracteristicas_temperatura(años,datos)
         #titulo y nombre de ejes
         plt.title("Dia con max temperatura en un año")
         plt.ylabel("Temperatura")
@@ -87,18 +87,18 @@ def temperaturaLluviamax(historico,busqueda):
         plt.show()
         
         
-def temperaturaHumedad(historico,busqueda):
+def temperatura_humedad(historico,busqueda):
     años = ["2013","2014","2015","2016","2017"]
     datos=[0,0,0,0,0]
     cantidad_dias = [0,0,0,0,0]
-    estudioDedatosProm(años,datos,busqueda,historico,cantidad_dias)
+    estudio_datos_promedios(años,datos,busqueda,historico,cantidad_dias)
     if busqueda == "Relative Humidity":
         datos = list(map(lambda x:x*100//1, datos))
     #Caracteristicas del grafico
     if busqueda == "Max Temperature":
-        graficoCaracteristicastemperatura(años,datos)
+        grafico_caracteristicas_temperatura(años,datos)
     else:
-        graficoCaracteristicashumedad(años,datos)
+        grafico_caracteristicas_humedad(años,datos)
     #titulo y nombre de ejes
     plt.title(f"Promedio de {busqueda}")
     plt.ylabel(busqueda)
@@ -107,7 +107,7 @@ def temperaturaHumedad(historico,busqueda):
     plt.legend()
     plt.show()   
 
-def archivocsv():
+def inicio():
     historico = pd.read_csv("weatherdata--389-603.csv")
     entrada = True
     while entrada == True:
@@ -122,23 +122,30 @@ def archivocsv():
             opcion=input("Marque una opcion valida: ")
         if opcion == "1":
             busqueda = "Max Temperature"
-            temperaturaHumedad(historico,busqueda)
+            temperatura_humedad(historico,busqueda)
         elif opcion=="2":
             busqueda = "Relative Humidity"
-            temperaturaHumedad(historico,busqueda)
+            temperatura_humedad(historico,busqueda)
         elif opcion=="3":
             busqueda="Precipitation"
-            temperaturaLluviamax(historico,busqueda)
+            temperatura_lluvia_max(historico,busqueda)
         elif opcion=="4":
             busqueda="Max Temperature"
-            temperaturaLluviamax(historico,busqueda)
+            temperatura_lluvia_max(historico,busqueda)
         elif opcion=="0":
             entrada=False
+            
+def validacion_csv():
+    try:
+        archivo=open("weatherdata--389-603.csv")
+        inicio()
+    except:
+        print("\nHAY PROBLEMAS DE CONEXION\n")
             
 def main():
     opcion_usuario = 4
     if opcion_usuario == 4:
-        archivocsv()
+        validacion_csv()
         
 main()
         
