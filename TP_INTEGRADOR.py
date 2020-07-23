@@ -4,12 +4,12 @@ import os
 from geopy.distance import geodesic #Medir distancias
 from geopy.geocoders import Nominatim #Geolocalización
 geolocator = Nominatim(user_agent="TP_ALGORITMOS")
+import pandas as pd
+import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 from PIL import Image
 
-
-#location = geolocator.geocode(ubicacion, country_codes='ar')
 PROVINCIAS = {
         "BA": "Buenos Aires", "CA": "Catamarca", "CH":"Chubut",
         "CB":"Córdoba", "CR":"Corrientes", "ER":"Entre Ríos",
@@ -156,6 +156,183 @@ def verificar_conexion(ruta):
 
     diccionario_respuesta = {'respuesta': respuesta, 'conexion': valor}
     return diccionario_respuesta
+
+def grafico_caracteristicas_precipitacion(años,datos):
+    '''
+        Pre:Recibe una lista con los años, una lista datos para ubicarlos en el grafico.
+        Post:Ninguna, demarca instrucciones en el grafico a mostrar la funcion que le llama.
+    '''
+    plt.bar(años[0],datos[0], label= f"{datos[0]}Mm", width=0.5, color = "blue")
+    plt.bar(años[1],datos[1], label= f"{datos[1]}Mm", width=0.5, color = "orange")
+    plt.bar(años[2],datos[2], label= f"{datos[2]}Mm", width=0.5, color = "black")
+    plt.bar(años[3],datos[3], label= f"{datos[3]}Mm", width=0.5, color = "pink")
+    plt.bar(años[4],datos[4], label= f"{datos[4]}Mm", width=0.5, color = "red")    
+
+def grafico_caracteristicas_humedad(años,datos):
+    '''
+        Pre:Recibe una lista con las fechas, una lista datos para ubicarlos en el grafico.
+        Post:Ninguna, demarca instrucciones en el grafico a mostrar la funcion que le llama.
+    '''
+    plt.bar(años[0],datos[0], label= f"{datos[0]}%", width=0.5, color = "blue")
+    plt.bar(años[1],datos[1], label= f"{datos[1]}%", width=0.5, color = "orange")
+    plt.bar(años[2],datos[2], label= f"{datos[2]}%", width=0.5, color = "black")
+    plt.bar(años[3],datos[3], label= f"{datos[3]}%", width=0.5, color = "pink")
+    plt.bar(años[4],datos[4], label= f"{datos[4]}%", width=0.5, color = "red")
+
+def grafico_caracteristicas_temperatura(años,datos):
+    '''
+        Pre:Recibe una lista con los años o fechas, una lista datos para ubicarlos en el grafico.
+        Post:Ninguna, demarca instrucciones en el grafico a mostrar la funcion que le llama.
+    '''
+    plt.bar(años[0],datos[0], label= f"{datos[0]}°C", width=0.5, color = "blue")
+    plt.bar(años[1],datos[1], label= f"{datos[1]}°C", width=0.5, color = "orange")
+    plt.bar(años[2],datos[2], label= f"{datos[2]}°C", width=0.5, color = "black")
+    plt.bar(años[3],datos[3], label= f"{datos[3]}°C", width=0.5, color = "pink")
+    plt.bar(años[4],datos[4], label= f"{datos[4]}°C", width=0.5, color = "red")
+    
+def estudio_datos_max(años,datos,busqueda, historico):
+    '''
+        Pre:Recibe una lista con los años, una lista datos para colocar los maximos, una palabra para
+        hacer la busqueda en el dataframe.
+        Post:Ninguna, deja a la funcion que le llama con la lista datos a utilizar completa y la lista
+        años con la fecha con maxima temperatura.
+
+    '''
+    fechas = [0,0,0,0,0]#Fecha en que hubo mayor temperatura y mayor milimetros de lluvia
+    for i in range(0,len(historico["Date"])):
+        read = historico["Date"][i]
+        posicion = 0
+        
+        for año in años:
+            if (año in read) == True:
+                posicion = años.index(año)
+                
+        if historico[busqueda][i]>datos[posicion]:
+            datos[posicion]=historico[busqueda][i]#temperatura o milimetros de lluvia maximo en dia
+            fechas[posicion]=historico["Date"][i]
+            
+        if i==len(historico["Date"])-1:
+            for i in range(0,len(fechas)):
+                años[i]=fechas[i]
+
+def estudio_datos_promedios(años,datos,busqueda,historico):
+    cantidad_dias = [0,0,0,0,0]
+    '''
+        Pre:Recibe una lista con los años, una lista datos para sumar los datos, una palabra para
+        hacer la busqueda en el dataframe.
+        Post:Ninguna, deja a la funcion que le llama con la lista datos a utilizar completa.
+
+    '''
+    for i in range(0,len(historico["Date"])-1):
+        read = historico["Date"][i]
+        posicion = 0
+        for año in años:
+            if (año in read) == True:
+                posicion = años.index(año)
+        datos[posicion] += historico[busqueda][i]
+        cantidad_dias[posicion] += 1
+        
+    for i in range (0,len(cantidad_dias)):
+        datos[i]=datos[i]/cantidad_dias[i]
+                
+def temperatura_lluvia_max(historico,busqueda):
+    '''
+        Pre:Recibe un dataframe y una palabra para estudiar una columna en el dataframe.
+        Post:Muestra en pantalla un grafico.
+
+    '''
+    años = ["2013","2014","2015","2016","2017"]
+    datos=[0,0,0,0,0]
+    estudio_datos_max(años,datos,busqueda,historico)
+    if busqueda=="Precipitation":
+        #Caractersticas del grafico
+        grafico_caracteristicas_precipitacion(años,datos)
+        #titulo y nombre de ejes
+        plt.title("Dia Maximo en mm de lluvia")
+        plt.ylabel("Mm de lluvia")
+        plt.xlabel("Dia")
+        #mostrar
+        plt.legend()
+        plt.show()
+    elif busqueda == "Max Temperature" :
+        #Caractersticas del grafico
+        grafico_caracteristicas_temperatura(años,datos)
+        #titulo y nombre de ejes
+        plt.title("Dia con max temperatura en un año")
+        plt.ylabel("Temperatura")
+        plt.xlabel("Dia")
+        #mostrar
+        plt.legend()
+        plt.show()
+        
+        
+def temperatura_humedad(historico,busqueda):
+    '''
+        Pre:Recibe un dataframe y una palabra para estudiar una columna en el dataframe.
+        Post:Muestra en pantalla un grafico.
+
+    '''
+    años = ["2013","2014","2015","2016","2017"]
+    datos=[0,0,0,0,0]
+    estudio_datos_promedios(años,datos,busqueda,historico)
+    if busqueda == "Relative Humidity":
+        datos = list(map(lambda x:x*100//1, datos))
+    #Caracteristicas del grafico
+    if busqueda == "Max Temperature":
+        grafico_caracteristicas_temperatura(años,datos)
+    else:
+        grafico_caracteristicas_humedad(años,datos)
+    #titulo y nombre de ejes
+    plt.title(f"Promedio de {busqueda}")
+    plt.ylabel(busqueda)
+    plt.xlabel("Año")
+    #mostrar
+    plt.legend()
+    plt.show()   
+
+def inicio():
+    '''
+        Pre:Ninguna
+        Post:Muestra en pantalla las opciones a usuario.
+
+    '''
+    historico = pd.read_csv("weatherdata--389-603.csv")
+    entrada = True
+    while entrada == True:
+        print("\n------BIENVENIDO A CONOCER LOS REGISTROS DE LA ZONA FERTIL Y PRODUCTORA ARGENTINA------\n")
+        print("1)Marque 1 para ver el gráfico con el promedio de datos anuales de los últimos 5 años.")
+        print("2)Marque 2 para ver el gráfico con el promedio de humedad de los últimos 5 años.")
+        print("3)Marque 3 para ver el gráfico con los milímetros máximos de lluvia de los últimos 5 años.")
+        print("4)Marque 4 para ver el gráfico con la temperatura máxima de los últimos 5 años.")
+        print("0)Marque 0 para salir.")
+        opcion=input("Marque la opcion deseada: ")
+        while opcion!="1" and opcion!="2" and opcion!="3" and opcion!="4" and opcion!="0":
+            opcion=input("Marque una opcion valida: ")
+        if opcion == "1":
+            busqueda = "Max Temperature"
+            temperatura_humedad(historico,busqueda)
+        elif opcion=="2":
+            busqueda = "Relative Humidity"
+            temperatura_humedad(historico,busqueda)
+        elif opcion=="3":
+            busqueda="Precipitation"
+            temperatura_lluvia_max(historico,busqueda)
+        elif opcion=="4":
+            busqueda="Max Temperature"
+            temperatura_lluvia_max(historico,busqueda)
+        elif opcion=="0":
+            entrada=False
+
+def validacion_csv():
+    '''
+        Pre: Ninguna.
+        Post: Muestra en pantalla un mensaje de no encontrar el archivo.
+    '''
+    try:
+        archivo=open("weatherdata--389-603.csv")
+        inicio()
+    except:
+        print("\nHAY PROBLEMAS DE CONEXION\n")
 
 def validar_entrada(numero_opciones):
     '''
@@ -594,8 +771,7 @@ def main():
             if opcion == 7 or opcion == 8:
                 cerrar_menu = True
             elif  opcion == 4:
-                #llamar a funcion de graficos
-                pass
+                validacion_csv()
             else:
                 menu_de_acciones(opcion,ubicacion_usuario)
                 cerrar_menu = False
