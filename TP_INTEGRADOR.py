@@ -1,14 +1,14 @@
-import requests
-import geopy
-import os
+import requests #URL
+import geopy #Incluyo excepciones de la libreria
+import os #Borrar pantalla
 from geopy.distance import geodesic #Medir distancias
 from geopy.geocoders import Nominatim #Geolocalización
 geolocator = Nominatim(user_agent="TP_ALGORITMOS")
-import pandas as pd
-import matplotlib.pyplot as plt
-import cv2
-import numpy as np
-from PIL import Image
+import pandas as pd #Leer csv
+import matplotlib.pyplot as plt #Mostrar graficos
+import cv2 #Analisis de imagen
+import numpy as np #Analisis de imagen
+from PIL import Image #Verificar imagen
 
 PROVINCIAS = {
         "BA": "Buenos Aires", "CA": "Catamarca", "CH":"Chubut",
@@ -45,6 +45,23 @@ BLANCO_BGR_MAX = np.array([255,255,255])
 KERNEL_CAP = np.ones((3,3), np.uint8)
 KERNEL = np.ones((1,1), np.uint8)
 
+def borrar_pantalla(): #Definimos la función estableciendo el nombre que queramos
+    if os.name == "posix":
+       os.system ("clear")
+    elif os.name == "ce" or os.name == "nt" or os.name == "dos":
+       os.system ("cls")
+
+def validar_entrada(numero_opciones):
+    '''
+        Pre: Recibe la cantidad de opciones de entrada
+        Post: Retorna la opción validada de tipo int
+    '''
+    respuesta = input("Ingrese su opción: ")
+    while(not respuesta.isnumeric() or 0>=int(respuesta) or int(respuesta)>numero_opciones):
+        print("Opción inválida, intente nuevamente")
+        respuesta = input("Ingrese su opción: ")
+    return int(respuesta)
+
 def verificar_imagen():
     '''
         Verifica si existe imagen en el directorio del programa
@@ -62,7 +79,6 @@ def hallar_coordenadas(contorno_blanco, imagen_original):
         halla los centroides en la imagen
         Post: Retorna un diccionario con las coordenadas de las ciudades ubicadas en la imagen
     '''
-
     coordenadas = {}
     for (i,c) in enumerate(contorno_blanco):
         momentos_b = cv2.moments(c)
@@ -70,7 +86,6 @@ def hallar_coordenadas(contorno_blanco, imagen_original):
             momentos_b['m00'] = 1
         coordenada_x_b = int(momentos_b['m10']/momentos_b['m00'])
         coordenada_y_b = int(momentos_b['m01']/momentos_b['m00'])
-        #cv2.putText(imagen_original,f"{str(i+1)}",(coordenada_x_b-15,coordenada_y_b+15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, [0,0,255],1,cv2.LINE_AA)
         coordenadas[PROVINCIAS_CENTRO[i]] = [coordenada_x_b, coordenada_y_b]
     return coordenadas
 
@@ -103,7 +118,6 @@ def analizar_tormenta(imagen_original, gama_baja, gama_alta, mensaje_meteoreolog
     mascara = cv2.morphologyEx(mascara, cv2.MORPH_OPEN, KERNEL)
 
     contorno,_ = cv2.findContours(mascara, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    aviso = False
     for ciudad,coordenadas in coordenadas_ciudades.items():
         aviso = False
         for c in contorno:
@@ -204,7 +218,7 @@ def estudio_datos_max(años,datos,busqueda, historico):
         posicion = 0
         
         for año in años:
-            if (año in read) == True:
+            if año in read:
                 posicion = años.index(año)
                 
         if historico[busqueda][i]>datos[posicion]:
@@ -216,24 +230,24 @@ def estudio_datos_max(años,datos,busqueda, historico):
                 años[i]=fechas[i]
 
 def estudio_datos_promedios(años,datos,busqueda,historico):
-    cantidad_dias = [0,0,0,0,0]
     '''
         Pre:Recibe una lista con los años, una lista datos para sumar los datos, una palabra para
         hacer la busqueda en el dataframe.
         Post:Ninguna, deja a la funcion que le llama con la lista datos a utilizar completa.
 
     '''
+    cantidad_dias = [0,0,0,0,0]
     for i in range(0,len(historico["Date"])-1):
         read = historico["Date"][i]
         posicion = 0
         for año in años:
-            if (año in read) == True:
+            if año in read:
                 posicion = años.index(año)
         datos[posicion] += historico[busqueda][i]
         cantidad_dias[posicion] += 1
         
     for i in range (0,len(cantidad_dias)):
-        datos[i]=datos[i]/cantidad_dias[i]
+        datos[i] = datos[i]/cantidad_dias[i]
                 
 def temperatura_lluvia_max(historico,busqueda):
     '''
@@ -273,9 +287,9 @@ def temperatura_humedad(historico,busqueda):
 
     '''
     años = ["2013","2014","2015","2016","2017"]
-    datos=[0,0,0,0,0]
+    datos= [0,0,0,0,0]
     estudio_datos_promedios(años,datos,busqueda,historico)
-    if busqueda == "Relative Humidity":
+    if busqueda == "Relative Humidity": 
         datos = list(map(lambda x:x*100//1, datos))
     #Caracteristicas del grafico
     if busqueda == "Max Temperature":
@@ -290,38 +304,38 @@ def temperatura_humedad(historico,busqueda):
     plt.legend()
     plt.show()   
 
-def inicio():
+def iniciar_csv():
     '''
         Pre:Ninguna
         Post:Muestra en pantalla las opciones a usuario.
 
     '''
     historico = pd.read_csv("weatherdata--389-603.csv")
-    entrada = True
+    entrada = True  
     while entrada == True:
-        print("\n------BIENVENIDO A CONOCER LOS REGISTROS DE LA ZONA FERTIL Y PRODUCTORA ARGENTINA------\n")
-        print("1)Marque 1 para ver el gráfico con el promedio de datos anuales de los últimos 5 años.")
+        print("\n------GRAFICADORA DE ARCHIVOS CSV------\n")
+        print("1)Marque 1 para ver el gráfico con el promedio de datos de temperatura anuales de los últimos 5 años.")
         print("2)Marque 2 para ver el gráfico con el promedio de humedad de los últimos 5 años.")
         print("3)Marque 3 para ver el gráfico con los milímetros máximos de lluvia de los últimos 5 años.")
         print("4)Marque 4 para ver el gráfico con la temperatura máxima de los últimos 5 años.")
-        print("0)Marque 0 para salir.")
-        opcion=input("Marque la opcion deseada: ")
-        while opcion!="1" and opcion!="2" and opcion!="3" and opcion!="4" and opcion!="0":
-            opcion=input("Marque una opcion valida: ")
-        if opcion == "1":
+        print("5)Marque 5 para salir.")
+        opcion = validar_entrada(5)
+        print("Cargando...")
+        borrar_pantalla()
+        if opcion == 1:
             busqueda = "Max Temperature"
             temperatura_humedad(historico,busqueda)
-        elif opcion=="2":
+        elif opcion == 2:
             busqueda = "Relative Humidity"
             temperatura_humedad(historico,busqueda)
-        elif opcion=="3":
+        elif opcion == 3:
             busqueda="Precipitation"
             temperatura_lluvia_max(historico,busqueda)
-        elif opcion=="4":
+        elif opcion == 4:
             busqueda="Max Temperature"
             temperatura_lluvia_max(historico,busqueda)
-        elif opcion=="0":
-            entrada=False
+        elif opcion == 5:
+            entrada = False
 
 def validacion_csv():
     '''
@@ -329,21 +343,10 @@ def validacion_csv():
         Post: Muestra en pantalla un mensaje de no encontrar el archivo.
     '''
     try:
-        archivo=open("weatherdata--389-603.csv")
-        inicio()
+        archivo= open("weatherdata--389-603.csv")
+        iniciar_csv()
     except:
         print("\nHAY PROBLEMAS DE CONEXION\n")
-
-def validar_entrada(numero_opciones):
-    '''
-        Pre: Recibe la cantidad de opciones de entrada
-        Post: Retorna la opción validada de tipo int
-    '''
-    respuesta = input("Ingrese su opción: ")
-    while(not respuesta.isnumeric() or 0>=int(respuesta) or int(respuesta)>numero_opciones):
-        print("Opción inválida, intente nuevamente")
-        respuesta = input("Ingrese su opción: ")
-    return int(respuesta)
     
 def ubicar_provincia(mensaje_determinado):
     '''
@@ -372,25 +375,19 @@ def ciudad_en_mayusculas(mensaje_determinado):
     salida = " ".join(entrada_lista)
     return salida
 
-def borrarPantalla(): #Definimos la función estableciendo el nombre que queramos
-    if os.name == "posix":
-       os.system ("clear")
-    elif os.name == "ce" or os.name == "nt" or os.name == "dos":
-       os.system ("cls")
-
 def geolocalizacion_por_nombre():
-    lugar = input('Ingrese su ubicacion: ')
+    lugar = input('Ingrese su ubicacion(EJEMPLO: Moreno, Ezeiza, Buenos Aires): ')
     try:
-        location = geolocator.geocode(lugar, country_codes='ar', addressdetails=True)
+        locacion = geolocator.geocode(lugar, country_codes='ar', addressdetails=True)
     except AttributeError:
         print(f'No se encontro {lugar}')
-        location = None
+        locacion = None
     except geopy.exc.GeocoderServiceError:
         print('Fallo la conexión...')
-        location = None
+        locacion = None
 
-    if location != None:
-        ubicacion = location.raw
+    if locacion != None:
+        ubicacion = locacion.raw
         provincia = ubicacion['address']['state']
         try:
             ciudad = ubicacion['address']['city']
@@ -403,7 +400,7 @@ def geolocalizacion_por_nombre():
         ciudad = None
         provincia = None
 
-    diccionario = {'Ciudad': ciudad, 'Provincia': provincia, 'Lugar': location}
+    diccionario = {'Ciudad': ciudad, 'Provincia': provincia, 'Lugar': locacion}
     return diccionario
 
 def verificar_coordenadas(coordenadas):
@@ -411,34 +408,34 @@ def verificar_coordenadas(coordenadas):
         Pre: Recibe una tupla con las coordenadas
         Post: Devulve un diccionario con un booleano, segun si la conexion fue exitosa o no, y la ubicacion en forma de diccionario
     """
-    coordanadas_validas = False
+    coordenadas_validas = False
     problemas_conexion = False
     conexion = False
     ubicacion = None
-    while coordanadas_validas == False and problemas_conexion == False:
+    while coordenadas_validas == False and problemas_conexion == False:
         try:
-            location = geolocator.reverse(coordenadas)
-            ubicacion = location.raw
+            locacion = geolocator.reverse(coordenadas)
+            ubicacion = locacion.raw
             conexion = True
-            coordanadas_validas = True
+            coordenadas_validas = True
             
         except TypeError:
             print('Direccion invalida...')
             latitud = input("lat: ")
             longitud = input('long: ')
             coordenadas = (latitud, longitud)
-            coordanadas_validas = False
+            coordenadas_validas = False
         except ValueError:
             print('Coordenadas invalidas, intente nuevamente')
             latitud = input("lat: ")
             longitud = input('long: ')
             coordenadas = (latitud, longitud)
-            coordanadas_validas = False
+            coordenadas_validas = False
         except geopy.exc.GeocoderServiceError:
             print('Fallo la conexión...')
             problemas_conexion = True
         
-    return {'conexion': conexion, 'ubicacion': ubicacion, 'Lugar': location}
+    return {'conexion': conexion, 'ubicacion': ubicacion, 'Lugar': locacion}
             
 
 def geolocalizacion_por_coordenadas():
@@ -453,7 +450,7 @@ def geolocalizacion_por_coordenadas():
     geolocalizacion = verificar_coordenadas(coordenadas)
     if geolocalizacion['conexion'] == True:
         ubicacion = geolocalizacion['ubicacion']
-
+        
         try:
             provincia = ubicacion['address']['state']
         except KeyError:
@@ -468,6 +465,8 @@ def geolocalizacion_por_coordenadas():
                 ciudad = ubicacion['address']['town']
             except KeyError:
                 ciudad = None
+            print("No se encontro ubicación con esas coordenadas")
+            ciudad = None
         
     else:
         print('Error de conexion...')
@@ -514,7 +513,7 @@ def hallar_usuario():
         if opcion == 1:
             ubicacion_correcta = True
         else:
-            borrarPantalla()
+            borrar_pantalla()
             print('Agregue informacion. Revise la escritura.\n')
             ubicacion_correcta = False
     return ubicacion
@@ -648,7 +647,7 @@ def mostrar_pronostico_extendido_ciudad(respuesta_json, ciudad, provincia, dia_p
             print("-"*80,'\n')
         elif(ciudad in diccionario['name'] and provincia == diccionario['province']):
             print("-"*80)
-            print(f"No sé encontro la ciudad exacta pero lo más parecido es la ciudad de {diccionario['name']} ")
+            print(f"No sé encontró la ciudad exacta pero lo más parecido es la ciudad de {diccionario['name']}")
             print(f"PRONÓSTICO PARA DENTRO DE {dia_pronostico} DÍAS DE LA CIUDAD DE: {ciudad}")
             print("-"*80)
             print(f'MAÑANA:\nTemperatura: {diccionario["weather"]["morning_temp"]}\nDescripción: {diccionario["weather"]["morning_desc"]}')
@@ -701,7 +700,6 @@ def mostrar_alertas(ubicacion_usuario):
 
         while terminar == False:
             contador = 1
-
             for diccionario in respuesta_json:
                for region in diccionario['zones']:
                    if localizacion in diccionario['zones'][region]:
@@ -711,10 +709,8 @@ def mostrar_alertas(ubicacion_usuario):
                        print(f'Descripción: {diccionario["description"]}\n')
                        print("-"*80)
                        contador += 1
-
             if contador == 1:
                 print(f'\nNo hay alertas para {localizacion}\n')
-
             print('1. Si desea ver alertas para otra ubicacion por geolocalización')
             print('2. Para salir')
             opcion = validar_entrada(2)
@@ -743,10 +739,13 @@ def menu_de_acciones(opcion, ubicacion_usuario):
         mostrar_alertas(ubicacion_usuario)
     elif opcion == 3:
         alertas_nacionales()
+    elif  opcion == 4:
+        validacion_csv()
     elif opcion == 5:
         pronostico_extendido(ubicacion_usuario)
     elif(opcion == 6):
         iterar_colores()
+
 
 def main():
     '''
@@ -771,11 +770,9 @@ def main():
             print("7.Cambiar su ubicación")
             print("8.Cerrar el programa\n")
             opcion = validar_entrada(8)
-
+            borrar_pantalla()
             if opcion == 7 or opcion == 8:
                 cerrar_menu = True
-            elif  opcion == 4:
-                validacion_csv()
             else:
                 menu_de_acciones(opcion,ubicacion_usuario)
                 cerrar_menu = False
@@ -786,11 +783,3 @@ def main():
             cerrar_programa = False
     print('Fin del programa\nHasta la proxima!')
 main()
-
-
-
-
-
-
-
-
