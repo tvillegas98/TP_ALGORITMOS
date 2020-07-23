@@ -388,7 +388,11 @@ def geolocalizacion_por_nombre():
 
     if locacion != None:
         ubicacion = locacion.raw
-        provincia = ubicacion['address']['state']
+        try:
+            provincia = ubicacion['address']['state']
+        except KeyError:
+            provincia = None
+            
         try:
             ciudad = ubicacion['address']['city']
         except KeyError:
@@ -412,6 +416,7 @@ def verificar_coordenadas(coordenadas):
     problemas_conexion = False
     conexion = False
     ubicacion = None
+    locacion = None
     while coordenadas_validas == False and problemas_conexion == False:
         try:
             locacion = geolocator.reverse(coordenadas)
@@ -454,9 +459,12 @@ def geolocalizacion_por_coordenadas():
         try:
             provincia = ubicacion['address']['state']
         except KeyError:
-            dic = ubicacion['address']
-            clave = (list(dic.keys()))[0]
-            provincia = dic[clave]
+            try:
+                dic = ubicacion['address']
+                clave = (list(dic.keys()))[0]
+                provincia = dic[clave]
+            except KeyError:
+                provincia = None
 
         try:
             ciudad = ubicacion['address']['city']
@@ -465,14 +473,10 @@ def geolocalizacion_por_coordenadas():
                 ciudad = ubicacion['address']['town']
             except KeyError:
                 ciudad = None
-            print("No se encontro ubicación con esas coordenadas")
-            ciudad = None
-        
     else:
         print('Error de conexion...')
         provincia = None
         ciudad = None
-
     return {'Ciudad': ciudad, 'Provincia': provincia, 'Lugar': geolocalizacion['Lugar']}
 
 def hallar_al_usuario_manualmente():
@@ -503,7 +507,7 @@ def hallar_usuario():
             ubicacion = geolocalizacion_por_coordenadas()
             lugar = ubicacion['Lugar']
 
-        if ubicacion['Ciudad'] == None:
+        if ubicacion['Ciudad'] == None or ubicacion['Provincia'] == None:
             print('Algo salio mal, ingrese su ubicacion nuevamente\n')
             ubicacion = hallar_al_usuario_manualmente()
             lugar = ubicacion['Ciudad'] + ', ' + ubicacion['Provincia']
@@ -716,15 +720,13 @@ def mostrar_alertas(ubicacion_usuario):
             opcion = validar_entrada(2)
             if opcion == 1:
                 diccionario = geolocalizacion_por_coordenadas()
-                print(diccionario)
-                localizacion = diccionario['Ciudad']
+                localizacion = diccionario['Provincia']
                 if localizacion == None:
                     terminar = True
                 else:
                     terminar = False
             else:
                 terminar = True
-            
     else:
         print('No se pudo establecer conexion con el Servicio Meteorológico Nacional.')
 
