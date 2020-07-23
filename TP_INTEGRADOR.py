@@ -8,7 +8,6 @@ import pandas as pd #Leer csv
 import matplotlib.pyplot as plt #Mostrar graficos
 import cv2 #Analisis de imagen
 import numpy as np #Analisis de imagen
-from PIL import Image #Verificar imagen
 
 PROVINCIAS = {
         "BA": "Buenos Aires", "CA": "Catamarca", "CH":"Chubut",
@@ -45,7 +44,7 @@ BLANCO_BGR_MAX = np.array([255,255,255])
 KERNEL_CAP = np.ones((3,3), np.uint8)
 KERNEL = np.ones((1,1), np.uint8)
 
-def borrar_pantalla(): #Definimos la función estableciendo el nombre que queramos
+def borrar_pantalla():
     if os.name == "posix":
        os.system ("clear")
     elif os.name == "ce" or os.name == "nt" or os.name == "dos":
@@ -67,7 +66,8 @@ def verificar_imagen():
         Verifica si existe imagen en el directorio del programa
     '''
     try:
-        Image.open("radar.png","r")
+        archivo = open("radar.png","rb")
+        archivo.close()
         return True
     except FileNotFoundError:
         print("No se ha podido detectar la imagen en la carpeta")
@@ -210,7 +210,6 @@ def estudio_datos_max(años,datos,busqueda, historico):
         hacer la busqueda en el dataframe.
         Post:Ninguna, deja a la funcion que le llama con la lista datos a utilizar completa y la lista
         años con la fecha con maxima temperatura.
-
     '''
     fechas = [0,0,0,0,0]#Fecha en que hubo mayor temperatura y mayor milimetros de lluvia
     for i in range(0,len(historico["Date"])):
@@ -234,7 +233,6 @@ def estudio_datos_promedios(años,datos,busqueda,historico):
         Pre:Recibe una lista con los años, una lista datos para sumar los datos, una palabra para
         hacer la busqueda en el dataframe.
         Post:Ninguna, deja a la funcion que le llama con la lista datos a utilizar completa.
-
     '''
     cantidad_dias = [0,0,0,0,0]
     for i in range(0,len(historico["Date"])-1):
@@ -253,7 +251,6 @@ def temperatura_lluvia_max(historico,busqueda):
     '''
         Pre:Recibe un dataframe y una palabra para estudiar una columna en el dataframe.
         Post:Muestra en pantalla un grafico.
-
     '''
     años = ["2013","2014","2015","2016","2017"]
     datos=[0,0,0,0,0]
@@ -284,7 +281,6 @@ def temperatura_humedad(historico,busqueda):
     '''
         Pre:Recibe un dataframe y una palabra para estudiar una columna en el dataframe.
         Post:Muestra en pantalla un grafico.
-
     '''
     años = ["2013","2014","2015","2016","2017"]
     datos= [0,0,0,0,0]
@@ -304,13 +300,11 @@ def temperatura_humedad(historico,busqueda):
     plt.legend()
     plt.show()   
 
-def iniciar_csv():
+def iniciar_csv(historico):
     '''
-        Pre:Ninguna
+        Pre:Recibe el archivo csv
         Post:Muestra en pantalla las opciones a usuario.
-
     '''
-    historico = pd.read_csv("weatherdata--389-603.csv")
     entrada = True  
     while entrada == True:
         print("\n------GRAFICADORA DE ARCHIVOS CSV------\n")
@@ -339,15 +333,15 @@ def iniciar_csv():
 
 def validacion_csv():
     '''
-        Pre: Ninguna.
+        Pre: Verifica si el archivo csv está en lacarpeta
         Post: Muestra en pantalla un mensaje de no encontrar el archivo.
     '''
     try:
-        archivo= open("weatherdata--389-603.csv")
-        iniciar_csv()
-    except:
-        print("\nHAY PROBLEMAS DE CONEXION\n")
-    
+        historico = pd.read_csv("tabla_de_datos.csv")
+    except FileNotFoundError:
+        print("\nNo se ha encontrado el archivo en la carpeta\n")
+    iniciar_csv(historico)
+
 def ubicar_provincia(mensaje_determinado):
     '''
         Pre:Recibe un mensaje determinado para el input, luego mediante la clave ingresada se buscará en el diccionario la provincia
