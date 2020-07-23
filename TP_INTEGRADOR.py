@@ -506,7 +506,6 @@ def hallar_usuario():
             lugar = ubicacion['Ciudad'] + ', ' + ubicacion['Provincia']
         
         print(f'Usted está en {lugar}? \n1. Si\n2. No')
-        print(f'{ubicacion["Ciudad"]} {ubicacion["Provincia"]}')
         opcion = validar_entrada(2)
         if opcion == 1:
             ubicacion_correcta = True
