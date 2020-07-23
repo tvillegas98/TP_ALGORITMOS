@@ -1,5 +1,6 @@
 import requests
 import geopy
+import os
 from geopy.distance import geodesic #Medir distancias
 from geopy.geocoders import Nominatim #Geolocalización
 geolocator = Nominatim(user_agent="TP_ALGORITMOS")
@@ -194,23 +195,149 @@ def ciudad_en_mayusculas(mensaje_determinado):
     salida = " ".join(entrada_lista)
     return salida
 
-def hallar_al_usuario():
+def borrarPantalla(): #Definimos la función estableciendo el nombre que queramos
+    if os.name == "posix":
+       os.system ("clear")
+    elif os.name == "ce" or os.name == "nt" or os.name == "dos":
+       os.system ("cls")
+
+def geolocalizacion_por_nombre():
+    lugar = input('Ingrese su ubicacion: ')
+    try:
+        location = geolocator.geocode(lugar, country_codes='ar', addressdetails=True)
+    except AttributeError:
+        print(f'No se encontro {lugar}')
+        location = None
+    except geopy.exc.GeocoderServiceError:
+        print('Fallo la conexión...')
+        location = None
+
+    if location != None:
+        ubicacion = location.raw
+        provincia = ubicacion['address']['state']
+        try:
+            ciudad = ubicacion['address']['city']
+        except KeyError:
+            ciudad = None
+    else:
+        ciudad = None
+        provincia = None
+
+    diccionario = {'Ciudad': ciudad, 'Provincia': provincia, 'Lugar': location}
+    return diccionario
+
+def verificar_coordenadas(coordenadas):
+    """
+        Pre: Recibe una tupla con las coordenadas
+        Post: Devulve un diccionario con un booleano, segun si la conexion fue exitosa o no, y la ubicacion en forma de diccionario
+    """
+    coordanadas_validas = False
+    problemas_conexion = False
+    conexion = False
+    ubicacion = None
+    while coordanadas_validas == False and problemas_conexion == False:
+        try:
+            location = geolocator.reverse(coordenadas)
+            ubicacion = location.raw
+            conexion = True
+            coordanadas_validas = True
+            
+        except TypeError:
+            print('Direccion invalida...')
+            latitud = input("lat: ")
+            longitud = input('long: ')
+            coordenadas = (latitud, longitud)
+            coordanadas_validas = False
+        except ValueError:
+            print('Coordenadas invalidas, intente nuevamente')
+            latitud = input("lat: ")
+            longitud = input('long: ')
+            coordenadas = (latitud, longitud)
+            coordanadas_validas = False
+        except geopy.exc.GeocoderServiceError:
+            print('Fallo la conexión...')
+            problemas_conexion = True
+        
+    return {'conexion': conexion, 'ubicacion': ubicacion, 'Lugar': location}
+            
+
+def geolocalizacion_por_coordenadas():
+    """
+        Post: Devuelve la ciudad y la provincia de una lat y long ingresados en un diccionario, ante un error retorna None
+    """
+    print('Ingrese a continuacion las coordenadas')
+    latitud = input('Latitud: ')
+    longitud = input('Longitud: ')
+    coordenadas = (latitud, longitud)
+    
+    geolocalizacion = verificar_coordenadas(coordenadas)
+    if geolocalizacion['conexion'] == True:
+        ubicacion = geolocalizacion['ubicacion']
+
+        try:
+            provincia = ubicacion['address']['state']
+        except KeyError:
+            dic = ubicacion['address']
+            clave = (list(dic.keys()))[0]
+            provincia = dic[clave]
+
+        try:
+            ciudad = ubicacion['address']['city']
+        except KeyError:
+            ciudad = ubicacion['address']['town']
+        except KeyError:
+            ciudad = None
+        
+    else:
+        print('Error de conexion...')
+        provincia = None
+        ciudad = None
+
+    return {'Ciudad': ciudad, 'Provincia': provincia, 'Lugar': geolocalizacion['Lugar']}
+
+def hallar_al_usuario_manualmente():
     '''
         Pre: Ninguna, luego pide al usuario los datos de su localización
         Post: Retorna un diccionario con la clave Ciudad y Provincia con los datos del usuario
     '''
-    ubicacion_ingresada = False
-    while(ubicacion_ingresada == False):
-        print("A continuación ingrese la ubicación desde la cuál está usando nuestra aplicación, primero la abreviación de su provincia y luego su ciudad")
-        provincia_usuario = ubicar_provincia("Ingrese la abreviación de su provincia \nEjemplo: Buenos Aires se abrevia como BA, Catamarca como CA. \nIngrese aquí: ")
-        ciudad_usuario = ciudad_en_mayusculas("Ingrese el nombre de la ciudad: ")
-        print(f"¿Ústed está en la ciudad de {ciudad_usuario} en la provincia de {provincia_usuario}?\n 1.Si \n 2.No")
-        opcion = validar_entrada(2)
-        if(opcion == 1):
-            ubicacion_ingresada = True
-        else:
-            print("Si su ubicación no es la indicada, intente nuevamente")
+    print("A continuación ingrese la ubicación desde la cuál está usando nuestra aplicación, primero la abreviación de su provincia y luego su ciudad")
+    provincia_usuario = ubicar_provincia("Ingrese la abreviación de su provincia \nEjemplo: Buenos Aires se abrevia como BA, Catamarca como CA. \nIngrese aquí: ")
+    ciudad_usuario = ciudad_en_mayusculas("Ingrese el nombre de la ciudad: ")
     return {"Ciudad":ciudad_usuario, "Provincia": provincia_usuario}
+
+def hallar_usuario():
+    """
+        Pre: Ninguna, permiter hallar la ubicacion por geolocalizacion, y, en caso de un fallo ingresando los datos manualmente
+        Post: Retorna, en ambos casos, un diccionario con la ciudad y provincia del usuario
+    """
+    ubicacion_correcta = False
+    while ubicacion_correcta == False:
+        print('Elija como ingresar su ubicación: ')
+        print('1. Por nombre | 2. Por geolocalización\n')
+        opcion = validar_entrada(2)
+
+        if opcion == 1:
+            ubicacion = geolocalizacion_por_nombre()
+            lugar = ubicacion['Lugar']
+        else:
+            ubicacion = geolocalizacion_por_coordenadas()
+            lugar = ubicacion['Lugar']
+
+        if ubicacion['Ciudad'] == None:
+            print('Algo salio mal, ingrese su ubicacion nuevamente\n')
+            ubicacion = hallar_al_usuario_manualmente()
+            lugar = ubicacion['Ciudad'] + ', ' + ubicacion['Provincia']
+        
+        print(f'Usted está en {lugar}? \n1. Si\n2. No')
+        print(f'{ubicacion["Ciudad"]} {ubicacion["Provincia"]}')
+        opcion = validar_entrada(2)
+        if opcion == 1:
+            ubicacion_correcta = True
+        else:
+            borrarPantalla()
+            print('Agregue informacion. Revise la escritura.\n')
+            ubicacion_correcta = False
+    return ubicacion
 
 def verificar_ciudad(respuesta_json, ubicacion_usuario):
     '''
@@ -379,65 +506,6 @@ def pronostico_extendido(ubicacion_usuario):
 
         contador += 1
 
-def verificar_coordenadas(coordenadas):
-    """
-        Pre: Recibe una tupla con las coordenadas
-        Post: Devulve un diccionario con un booleano, segun si la conexion fue exitosa o no, y la ubicacion en forma de diccionario
-    """
-    coordanadas_validas = False
-    problemas_conexion = False
-    conexion = False
-    ubicacion = None
-    while coordanadas_validas == False and problemas_conexion == False:
-        try:
-            location = geolocator.reverse(coordenadas)
-            ubicacion = location.raw
-            conexion = True
-            coordanadas_validas = True
-            
-        except TypeError:
-            print('Direccion invalida...')
-            latitud = input("lat: ")
-            longitud = input('long: ')
-            coordenadas = (latitud, longitud)
-            coordanadas_validas = False
-        except ValueError:
-            print('Coordenadas invalidas, intente nuevamente')
-            latitud = input("lat: ")
-            longitud = input('long: ')
-            coordenadas = (latitud, longitud)
-            coordanadas_validas = False
-        except geopy.exc.GeocoderServiceError:
-            print('Fallo la conexión...')
-            problemas_conexion = True
-        
-    return {'conexion': conexion, 'ubicacion': ubicacion}
-            
-def geolocalizacion_por_coordenadas():
-    """
-        Post: Devuelve la provincia de una latitud y longitud ingresadas, en caso de no exitir tal informacion, devuelve el lugar ingresado
-    """
-    print('Ingrese a continuacion las coordenadas')
-    latitud = input('Latitud: ')
-    longitud = input('Longitud: ')
-    coordenadas = (latitud, longitud)
-    geolocalizacion = verificar_coordenadas(coordenadas)
-    
-    if geolocalizacion['conexion'] == True:
-        ubicacion = geolocalizacion['ubicacion']
-        try:
-            provincia = ubicacion['address']['state']
-        except KeyError:
-            dic = ubicacion['address']
-            clave = (list(dic.keys()))[0]
-            provincia = dic[clave]
-    else:
-        print('Error de conexion...')
-        provincia = None
-
-    return provincia
-
-
 def mostrar_alertas(ubicacion_usuario):
     '''
         Pre: Recibe la localizacion 
@@ -471,7 +539,8 @@ def mostrar_alertas(ubicacion_usuario):
             print('2. Para salir')
             opcion = validar_entrada(2)
             if opcion == 1:
-                localizacion = geolocalizacion_por_coordenadas()
+                diccionario = geolocalizacion_por_coordenadas()
+                localizacion = diccionario['Ciudad']
                 if localizacion == None:
                     terminar = True
                 else:
@@ -508,7 +577,7 @@ def main():
 
     while cerrar_programa == False:
         cerrar_menu = False
-        ubicacion_usuario = hallar_al_usuario()
+        ubicacion_usuario = hallar_usuario()
 
         while cerrar_menu == False:
             print("\n¿Que desea hacer?")
