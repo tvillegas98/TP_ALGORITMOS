@@ -395,7 +395,10 @@ def geolocalizacion_por_nombre():
         try:
             ciudad = ubicacion['address']['city']
         except KeyError:
-            ciudad = None
+            try:
+                ciudad = ubicacion['address']['village']
+            except KeyError:
+                ciudad = None
     else:
         ciudad = None
         provincia = None
@@ -461,9 +464,10 @@ def geolocalizacion_por_coordenadas():
         try:
             ciudad = ubicacion['address']['city']
         except KeyError:
-            ciudad = ubicacion['address']['town']
-        except KeyError:
-            ciudad = None
+            try:
+                ciudad = ubicacion['address']['town']
+            except KeyError:
+                ciudad = None
         
     else:
         print('Error de conexion...')
@@ -644,7 +648,7 @@ def mostrar_pronostico_extendido_ciudad(respuesta_json, ciudad, provincia, dia_p
             print("-"*80,'\n')
         elif(ciudad in diccionario['name'] and provincia == diccionario['province']):
             print("-"*80)
-            print(f"No sé encontro la ciudad exacta pero lo más parecido es la ciudad de {diccionarios['name']} ")
+            print(f"No sé encontro la ciudad exacta pero lo más parecido es la ciudad de {diccionario['name']} ")
             print(f"PRONÓSTICO PARA DENTRO DE {dia_pronostico} DÍAS DE LA CIUDAD DE: {ciudad}")
             print("-"*80)
             print(f'MAÑANA:\nTemperatura: {diccionario["weather"]["morning_temp"]}\nDescripción: {diccionario["weather"]["morning_desc"]}')
@@ -716,6 +720,7 @@ def mostrar_alertas(ubicacion_usuario):
             opcion = validar_entrada(2)
             if opcion == 1:
                 diccionario = geolocalizacion_por_coordenadas()
+                print(diccionario)
                 localizacion = diccionario['Ciudad']
                 if localizacion == None:
                     terminar = True
