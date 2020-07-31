@@ -3,11 +3,12 @@ import geopy #Incluyo excepciones de la libreria
 import os #Borrar pantalla
 from geopy.distance import geodesic #Medir distancias
 from geopy.geocoders import Nominatim #Geolocalización
-geolocator = Nominatim(user_agent="TP_ALGORITMOS")
 import pandas as pd #Leer csv
 import matplotlib.pyplot as plt #Mostrar graficos
 import cv2 #Analisis de imagen
 import numpy as np #Analisis de imagen
+
+GEOLOCATOR = Nominatim(user_agent="TP_ALGORITMOS")
 
 PROVINCIAS = {
         "BA": "Buenos Aires", "CA": "Catamarca", "CH":"Chubut",
@@ -60,18 +61,6 @@ def validar_entrada(numero_opciones):
         print("Opción inválida, intente nuevamente")
         respuesta = input("Ingrese su opción: ")
     return int(respuesta)
-
-def verificar_imagen():
-    '''
-        Verifica si existe imagen en el directorio del programa
-    '''
-    try:
-        archivo = open("radar.png","rb")
-        archivo.close()
-        return True
-    except FileNotFoundError:
-        print("No se ha podido detectar la imagen en la carpeta")
-        return False
 
 def hallar_coordenadas(contorno_blanco, imagen_original):
     '''
@@ -130,7 +119,7 @@ def analizar_tormenta(imagen_original, gama_baja, gama_alta, mensaje_meteoreolog
             vector_color = np.array([coordenada_x,coordenada_y])
             norma = np.linalg.norm(vector_ciudad-vector_color)
             distancia_real = (norma * CONSTANTE_REGLA_3_SIMPLES)/100
-            if(distancia_real <= 20  and aviso == False):
+            if(distancia_real <= 10  and aviso == False):
                 aviso = True
                 print(f"Se aproximan {mensaje_meteoreologico} a la ciudad de {ciudad} a una distancia de {distancia_real} km")
     
@@ -139,8 +128,8 @@ def iterar_colores():
         Pre: Ninguna, carga la imagen y luego hace llamados de funciones para trabajar en la imagen
         Post: Ninguno.
     '''   
-    imagen_detectada = verificar_imagen()
-    if(imagen_detectada == True):
+    ruta_imagen = os.getcwd() + '\\radar.png'
+    if(os.path.exists(ruta_imagen) == True):
         imagen_original = cv2.imread("radar.png")
         contorno_blanco = hallar_contornos_blancos(imagen_original)
         coordenadas_ciudades = hallar_coordenadas(contorno_blanco, imagen_original)
@@ -150,6 +139,8 @@ def iterar_colores():
         cv2.imshow("Imagen", imagen_original)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+    else:
+        print("No se ha encontrado la imagen en el directorio")
 
 def verificar_conexion(ruta):
     '''
@@ -331,16 +322,17 @@ def iniciar_csv(historico):
         elif opcion == 5:
             entrada = False
 
-def validacion_csv():
+def archivo_csv():
     '''
-        Pre: Verifica si el archivo csv está en lacarpeta
+        Pre: Verifica si el archivo csv está en la carpeta
         Post: Muestra en pantalla un mensaje de no encontrar el archivo.
     '''
-    try:
+    ruta_csv = os.getcwd() + '\\tabla_de_datos.csv'
+    if(os.path.exists(ruta_csv) == True):
         historico = pd.read_csv("tabla_de_datos.csv")
-    except FileNotFoundError:
-        print("\nNo se ha encontrado el archivo en la carpeta\n")
-    iniciar_csv(historico)
+        iniciar_csv(historico)
+    else:
+        print("No existe o no se ha encontrado el archivo en el directorio")
 
 def ubicar_provincia(mensaje_determinado):
     '''
@@ -354,25 +346,10 @@ def ubicar_provincia(mensaje_determinado):
     provincia = PROVINCIAS[caracteres_provincia]
     return provincia
 
-def ciudad_en_mayusculas(mensaje_determinado):
-    """
-        PRE: Recibe un mensaje para mostrar por pantalla, la fucion pide el ingrese de una ciudad.
-        Post: Devuelve el nombre de la ciudad en mayúsculas.
-    """
-    entrada = input(mensaje_determinado)
-    entrada_lista = entrada.split()
-
-    for i in range(len(entrada_lista)):
-        if entrada_lista[i] not in ['de', 'del']:
-            entrada_lista[i] = (str(entrada_lista[i]).capitalize())
-
-    salida = " ".join(entrada_lista)
-    return salida
-
 def geolocalizacion_por_nombre():
-    lugar = input('Ingrese su ubicacion(EJEMPLO: Moreno, Ezeiza, Buenos Aires): ')
+    lugar = input('Ingrese su ubicacion(EJEMPLO: Ezeiza, Buenos Aires): ')
     try:
-        locacion = geolocator.geocode(lugar, country_codes='ar', addressdetails=True)
+        locacion = GEOLOCATOR.geocode(lugar, country_codes='ar', addressdetails=True)
     except AttributeError:
         print(f'No se encontro {lugar}')
         locacion = None
@@ -413,7 +390,7 @@ def verificar_coordenadas(coordenadas):
     locacion = None
     while coordenadas_validas == False and problemas_conexion == False:
         try:
-            locacion = geolocator.reverse(coordenadas)
+            locacion = GEOLOCATOR.reverse(coordenadas)
             ubicacion = locacion.raw
             conexion = True
             coordenadas_validas = True
@@ -480,7 +457,8 @@ def hallar_al_usuario_manualmente():
     '''
     print("A continuación ingrese la ubicación desde la cuál está usando nuestra aplicación, primero la abreviación de su provincia y luego su ciudad")
     provincia_usuario = ubicar_provincia("Ingrese la abreviación de su provincia \nEjemplo: Buenos Aires se abrevia como BA, Catamarca como CA. \nIngrese aquí: ")
-    ciudad_usuario = ciudad_en_mayusculas("Ingrese el nombre de la ciudad: ")
+    ciudad_usuario = input("Ingrese el nombre de la ciudad: ").title()
+    ciudad_usuario = ciudad_usuario.replace("De", "de")
     return {"Ciudad":ciudad_usuario, "Provincia": provincia_usuario}
 
 def hallar_usuario():
@@ -736,7 +714,7 @@ def menu_de_acciones(opcion, ubicacion_usuario):
     elif opcion == 3:
         alertas_nacionales()
     elif  opcion == 4:
-        validacion_csv()
+        archivo_csv()
     elif opcion == 5:
         pronostico_extendido(ubicacion_usuario)
     elif(opcion == 6):
