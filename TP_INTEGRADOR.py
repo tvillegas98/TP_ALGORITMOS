@@ -346,47 +346,47 @@ def archivo_csv():
     else:
         print("No existe o no se ha encontrado el archivo en el directorio")
 
-def ubicar_provincia(mensaje_determinado):
+def ubicar_provincia():
     '''
-        Pre:Recibe un mensaje determinado para el input, luego mediante la clave ingresada se buscará en el diccionario la provincia
         Post: Devuelve la provincia indicada mediante el diccionario, de tipo str
     '''
-    caracteres_provincia = input(mensaje_determinado).upper()
+    print("Ingrese la abreviación de su provincia \nEjemplo: Buenos Aires se abrevia como BA, Catamarca como CA. \nIngrese aquí: ")
+    caracteres_provincia = input().upper()
     while(len(caracteres_provincia) != 2 or caracteres_provincia not in PROVINCIAS):
         print("Ingreso erróneo o provincia inexistente, intente nuevamente")
-        caracteres_provincia = input(mensaje_determinado).upper()
+        caracteres_provincia = input('Provincia: ').upper()
     provincia = PROVINCIAS[caracteres_provincia]
     return provincia
 
 def geolocalizacion_por_nombre():
-    lugar = input('Ingrese su ubicacion(EJEMPLO: Ezeiza, Buenos Aires): ')
+    """
+        Intenta definir la ubicacion del usuario usando geolocator, si falla devulve None.
+        Post: Retorna un diccionario.
+    """
+    lugar = input('Ingrese su ubicacion(EJEMPLO: Moreno, Ezeiza, Buenos Aires): ')
+    locacion = None
+
     try:
         locacion = GEOLOCATOR.geocode(lugar, country_codes='ar', addressdetails=True)
     except AttributeError:
         print(f'No se encontro {lugar}')
-        locacion = None
     except GeocoderServiceError:
         print('Fallo la conexión...')
-        locacion = None
 
-    if locacion != None:
-        ubicacion = locacion.raw
-        try:
+    if locacion is None:  
+        diccionario = {'Ciudad': None, 'Provincia': None, 'Lugar': None}
+        return diccionario
+
+    provincia = None
+    ciudad = None
+    ubicacion = locacion.raw
+    if "address" in ubicacion:
+        if "state" in ubicacion["address"]:
             provincia = ubicacion['address']['state']
-        except KeyError:
-            provincia = None
-            
-        try:
-            ciudad = ubicacion['address']['city']
-        except KeyError:
-            try:
-                ciudad = ubicacion['address']['village']
-            except KeyError:
-                ciudad = None
-    else:
-        ciudad = None
-        provincia = None
-
+        if "city" in ubicacion["address"]:
+            ciudad = ubicacion["address"]["city"]
+        elif "city" not in ubicacion["address"] and "village" in ubicacion["address"]:
+            ciudad = ubicacion["address"]["village"]
     diccionario = {'Ciudad': ciudad, 'Provincia': provincia, 'Lugar': locacion}
     return diccionario
 
@@ -395,36 +395,33 @@ def verificar_coordenadas(coordenadas):
         Pre: Recibe una tupla con las coordenadas
         Post: Devulve un diccionario con un booleano, segun si la conexion fue exitosa o no, y la ubicacion en forma de diccionario
     """
-    coordenadas_validas = False
-    problemas_conexion = False
     conexion = False
     ubicacion = None
-    locacion = None
-    while coordenadas_validas == False and problemas_conexion == False:
+    coordanadas_validas = False
+    while coordanadas_validas == False:
         try:
-            locacion = GEOLOCATOR.reverse(coordenadas)
-            ubicacion = locacion.raw
+            location = GEOLOCATOR.reverse(coordenadas)
+            ubicacion = location.raw
             conexion = True
-            coordenadas_validas = True
+            coordanadas_validas = True
             
+        except GeocoderServiceError:
+            print('Fallo la conexión...')
+            coordanadas_validas = True
         except TypeError:
             print('Direccion invalida...')
-            latitud = input("lat: ")
-            longitud = input('long: ')
-            coordenadas = (latitud, longitud)
-            coordenadas_validas = False
+            coordanadas_validas = False
         except ValueError:
             print('Coordenadas invalidas, intente nuevamente')
+            coordanadas_validas = False
+
+        if coordanadas_validas == False:
             latitud = input("lat: ")
             longitud = input('long: ')
             coordenadas = (latitud, longitud)
-            coordenadas_validas = False
-        except geopy.exc.GeocoderServiceError:
-            print('Fallo la conexión...')
-            problemas_conexion = True
-        
-    return {'conexion': conexion, 'ubicacion': ubicacion, 'Lugar': locacion}
-            
+
+    diccionario = {'conexion': conexion, 'ubicacion': ubicacion}
+    return diccionario
 
 def geolocalizacion_por_coordenadas():
     """
@@ -436,31 +433,18 @@ def geolocalizacion_por_coordenadas():
     coordenadas = (latitud, longitud)
     
     geolocalizacion = verificar_coordenadas(coordenadas)
+    ciudad = None
+    provincia = None
     if geolocalizacion['conexion'] == True:
         ubicacion = geolocalizacion['ubicacion']
-        
-        try:
-            provincia = ubicacion['address']['state']
-        except KeyError:
-            try:
-                dic = ubicacion['address']
-                clave = (list(dic.keys()))[0]
-                provincia = dic[clave]
-            except KeyError:
-                provincia = None
+        if 'address' in ubicacion:
+            if 'state' in ubicacion['address']:
+                provincia = ubicacion['address']['state']
+            if 'city' in ubicacion['address']:
+                ciudad = ubicacion['address']['city']
 
-        try:
-            ciudad = ubicacion['address']['city']
-        except KeyError:
-            try:
-                ciudad = ubicacion['address']['town']
-            except KeyError:
-                ciudad = None
-    else:
-        print('Error de conexion...')
-        provincia = None
-        ciudad = None
-    return {'Ciudad': ciudad, 'Provincia': provincia, 'Lugar': geolocalizacion['Lugar']}
+    diccionario = {'Ciudad': ciudad, 'Provincia': provincia}
+    return diccionario
 
 def hallar_al_usuario_manualmente():
     '''
@@ -468,10 +452,12 @@ def hallar_al_usuario_manualmente():
         Post: Retorna un diccionario con la clave Ciudad y Provincia con los datos del usuario
     '''
     print("A continuación ingrese la ubicación desde la cuál está usando nuestra aplicación, primero la abreviación de su provincia y luego su ciudad")
-    provincia_usuario = ubicar_provincia("Ingrese la abreviación de su provincia \nEjemplo: Buenos Aires se abrevia como BA, Catamarca como CA. \nIngrese aquí: ")
+    provincia_usuario = ubicar_provincia()
     ciudad_usuario = input("Ingrese el nombre de la ciudad: ").title()
     ciudad_usuario = ciudad_usuario.replace("De", "de")
-    return {"Ciudad":ciudad_usuario, "Provincia": provincia_usuario}
+    ciudad_usuario = ciudad_usuario.replace("Del", "del")
+    diccionario = {"Ciudad":ciudad_usuario, "Provincia": provincia_usuario}
+    return diccionario
 
 def hallar_usuario():
     """
@@ -512,9 +498,11 @@ def verificar_ciudad(respuesta_json, ubicacion_usuario):
         Post: Retorna un valor booleano indicando si la ciudad estaba en los datos json o no
     '''
     ciudad_encontrada = False
-    for diccionario in respuesta_json:
-        if ubicacion_usuario["Ciudad"] in diccionario["name"] and ciudad_encontrada == False:
+    i = 0
+    while ciudad_encontrada == False and i < len(respuesta_json):
+        if ubicacion_usuario["Ciudad"] in respuesta_json[i]["name"]:
             ciudad_encontrada = True
+        i += 1
     return ciudad_encontrada
 
 def mostrar_pronostico_provincia(respuesta_json, provincia):
@@ -542,28 +530,23 @@ def mostrar_pronostico_ciudad(respuesta_json, ciudad, provincia):
         Pre:Recibe los datos json de la url weather y la ciudad del usuario
         Post: Muestra el pronóstico de la ciudad del usuario, debido a que fue encontrada en los datos json
     '''
-    for diccionarios in respuesta_json:
-        if(ciudad == diccionarios['name'] and provincia == diccionarios['province']):
+    lista = respuesta_json
+    i = 0 
+    ciudad_encontrada = False
+    while ciudad_encontrada == False and i < len(respuesta_json):
+        if ciudad in lista[i]['name'] and provincia == lista[i]['province']:
             print("-"*80)
-            print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO DE LA CIUDAD DE: {ciudad}")
+            print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO DE LA CIUDAD DE: {lista[i]['name']}")
             print("-"*80)
-            print(f"Fecha y Hora: {diccionarios['forecast']['date_time']}")
-            print(f"Temperatura mínima: {diccionarios['forecast']['forecast']['0']['temp_min']}°C \nTemperatura máxima: {diccionarios['forecast']['forecast']['0']['temp_max']}°C")
-            print(f"Humedad: {diccionarios['weather']['humidity']}% \nVelocidad del viento: {diccionarios['weather']['wind_speed']} km/h")
-            print(f"Pronóstico de la mañana: {diccionarios['forecast']['forecast']['0']['morning']['description']}")
-            print(f"Pronóstico de la tarde: {diccionarios['forecast']['forecast']['0']['afternoon']['description']}\n")
+            print(f"Fecha y Hora: {lista[i]['forecast']['date_time']}")
+            print(f"Temperatura mínima: {lista[i]['forecast']['forecast']['0']['temp_min']}°C")
+            print(f"Temperatura máxima: {lista[i]['forecast']['forecast']['0']['temp_max']}°C")
+            print(f"Humedad: {lista[i]['weather']['humidity']}% \nVelocidad del viento: {lista[i]['weather']['wind_speed']} km/h")
+            print(f"Pronóstico de la mañana: {lista[i]['forecast']['forecast']['0']['morning']['description']}")
+            print(f"Pronóstico de la tarde: {lista[i]['forecast']['forecast']['0']['afternoon']['description']}\n")
             print("-"*80)
-        elif(ciudad in diccionarios['name'] and provincia == diccionarios['province']):
-            print("-"*80)
-            print(f"No sé encontro la ciudad exacta pero lo más parecido es la ciudad de {diccionarios['name']} ")
-            print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO DE LA CIUDAD DE: {diccionarios['name']}")
-            print("-"*80)
-            print(f"Fecha y Hora: {diccionarios['forecast']['date_time']}")
-            print(f"Temperatura mínima: {diccionarios['forecast']['forecast']['0']['temp_min']}°C \nTemperatura máxima: {diccionarios['forecast']['forecast']['0']['temp_max']}°C")
-            print(f"Humedad: {diccionarios['weather']['humidity']}% \nVelocidad del viento: {diccionarios['weather']['wind_speed']} km/h")
-            print(f"Pronóstico de la mañana: {diccionarios['forecast']['forecast']['0']['morning']['description']}")
-            print(f"Pronóstico de la tarde: {diccionarios['forecast']['forecast']['0']['afternoon']['description']}\n")
-            print("-"*80)
+            ciudad_encontrada = True
+        i += 1
 
 def pronostico_usuario(ubicacion_usuario):
     '''
@@ -689,8 +672,8 @@ def mostrar_alertas(ubicacion_usuario):
         while terminar == False:
             contador = 1
             for diccionario in respuesta_json:
-               for region in diccionario['zones']:
-                   if localizacion in diccionario['zones'][region]:
+                for region in diccionario['zones']:
+                    if localizacion in diccionario['zones'][region]:
                        print("-"*80)
                        print(f'ALERTA NÚMERO° {contador}: {diccionario["zones"][region]}\n')
                        print(f'Fecha: {diccionario["date"]} Hora: {diccionario["hour"]}\n')
@@ -700,12 +683,13 @@ def mostrar_alertas(ubicacion_usuario):
             if contador == 1:
                 print(f'\nNo hay alertas para {localizacion}\n')
             print('1. Si desea ver alertas para otra ubicacion por geolocalización')
-            print('2. Para salir')
+            print('2. Para regresar')
             opcion = validar_entrada(2)
             if opcion == 1:
                 diccionario = geolocalizacion_por_coordenadas()
                 localizacion = diccionario['Provincia']
                 if localizacion == None:
+                    print('No se encontró la ubicación...')
                     terminar = True
                 else:
                     terminar = False
@@ -732,11 +716,10 @@ def menu_de_acciones(opcion, ubicacion_usuario):
     elif(opcion == 6):
         iterar_colores()
 
-
 def main():
     '''
         Muestra el menú principal
-        El programa termina si el usuario ingresa la opción número 7.
+        El programa termina si el usuario ingresa la opción número 8.
     '''
     print("\n¡Bienvenidos a la aplicación del servicio metereológico de Tormenta!\n")
     cerrar_programa = False
@@ -744,6 +727,8 @@ def main():
     while cerrar_programa == False:
         cerrar_menu = False
         ubicacion_usuario = hallar_usuario()
+        borrar_pantalla()
+        print(f'UBICACIÓN: {ubicacion_usuario["Ciudad"]}, {ubicacion_usuario["Provincia"]}')
 
         while cerrar_menu == False:
             print("\n¿Que desea hacer?")
