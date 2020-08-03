@@ -1,5 +1,5 @@
 import requests #URL
-import geopy #Incluyo excepciones de la libreria
+from geopy.exc import GeocoderServiceError #Excepciones
 import os #Borrar pantalla
 from geopy.distance import geodesic #Medir distancias
 from geopy.geocoders import Nominatim #Geolocalización
@@ -66,7 +66,7 @@ def verificar_imagen():
         Verifica si existe imagen en el directorio del programa
     '''
     try:
-        archivo = open("radar.png","rb")
+        archivo = open("rb")
         archivo.close()
         return True
     except FileNotFoundError:
@@ -376,7 +376,7 @@ def geolocalizacion_por_nombre():
     except AttributeError:
         print(f'No se encontro {lugar}')
         locacion = None
-    except geopy.exc.GeocoderServiceError:
+    except GeocoderServiceError:
         print('Fallo la conexión...')
         locacion = None
 
