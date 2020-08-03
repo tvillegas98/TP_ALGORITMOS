@@ -10,6 +10,15 @@ import numpy as np #Analisis de imagen
 
 GEOLOCATOR = Nominatim(user_agent="TP_ALGORITMOS")
 
+URLS_P_EXTENDIDO = {
+                    'dia_uno': "https://ws.smn.gob.ar/map_items/forecast/1", 
+                    'dia_dos': "https://ws.smn.gob.ar/map_items/forecast/2", 
+                    'dia_tres': "https://ws.smn.gob.ar/map_items/forecast/3"
+                  }
+URL_ALERTAS = "https://ws.smn.gob.ar/alerts/type/AL"
+URL_ESTADO_ACTUAL = "https://ws.smn.gob.ar/map_items/weather"
+
+
 PROVINCIAS = {
         "BA": "Buenos Aires", "CA": "Catamarca", "CH":"Chubut",
         "CB":"Córdoba", "CR":"Corrientes", "ER":"Entre Ríos",
@@ -61,18 +70,6 @@ def validar_entrada(numero_opciones):
         print("Opción inválida, intente nuevamente")
         respuesta = input("Ingrese su opción: ")
     return int(respuesta)
-
-def verificar_imagen():
-    '''
-        Verifica si existe imagen en el directorio del programa
-    '''
-    try:
-        archivo = open("rb")
-        archivo.close()
-        return True
-    except FileNotFoundError:
-        print("No se ha podido detectar la imagen en la carpeta")
-        return False
 
 def hallar_coordenadas(contorno_blanco, imagen_original):
     '''
@@ -131,7 +128,7 @@ def analizar_tormenta(imagen_original, gama_baja, gama_alta, mensaje_meteoreolog
             vector_color = np.array([coordenada_x,coordenada_y])
             norma = np.linalg.norm(vector_ciudad-vector_color)
             distancia_real = (norma * CONSTANTE_REGLA_3_SIMPLES)/100
-            if(distancia_real <= 10  and aviso == False):
+            if(distancia_real <= 10  and aviso == False): #Si la distancia real es menor a 10km
                 aviso = True
                 print(f"Se aproximan {mensaje_meteoreologico} a la ciudad de {ciudad} a una distancia de {distancia_real} km")
     
@@ -397,25 +394,25 @@ def verificar_coordenadas(coordenadas):
     """
     conexion = False
     ubicacion = None
-    coordanadas_validas = False
-    while coordanadas_validas == False:
+    coordenadas_validas = False
+    while coordenadas_validas == False:
         try:
             location = GEOLOCATOR.reverse(coordenadas)
             ubicacion = location.raw
             conexion = True
-            coordanadas_validas = True
+            coordenadas_validas = True
             
         except GeocoderServiceError:
             print('Fallo la conexión...')
-            coordanadas_validas = True
+            coordenadas_validas = True
         except TypeError:
             print('Direccion invalida...')
-            coordanadas_validas = False
+            coordenadas_validas = False
         except ValueError:
             print('Coordenadas invalidas, intente nuevamente')
-            coordanadas_validas = False
+            coordenadas_validas = False
 
-        if coordanadas_validas == False:
+        if coordenadas_validas == False:
             latitud = input("lat: ")
             longitud = input('long: ')
             coordenadas = (latitud, longitud)
