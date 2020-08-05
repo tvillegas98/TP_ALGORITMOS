@@ -1,13 +1,18 @@
 import requests #URL
-from geopy.exc import GeocoderServiceError #Excepciones
 import os #Borrar pantalla
 from geopy.geocoders import Nominatim #Geolocalización
 import pandas as pd #Leer csv
 import matplotlib.pyplot as plt #Mostrar graficos
 import cv2 #Analisis de imagen
 import numpy as np #Analisis de imagen
+from geopy.exc import GeocoderServiceError #Excepciones
+from geopy.distance import geodesic #Medir distancias
+from geopy.geocoders import Nominatim #Geolocalización
 
-GEOLOCATOR = Nominatim(user_agent="TP_ALGORITMOS")
+GEOLOCATOR = Nominatim(user_agent = 'TP_ALGORITMOS')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RUTA_IMAGEN = os.path.join(BASE_DIR, 'radar.png')
+RUTA_CSV = os.path.join(BASE_DIR, 'tabla_de_datos.csv')
 
 URLS_P_EXTENDIDO = {
                     'dia_uno': "https://ws.smn.gob.ar/map_items/forecast/1", 
@@ -16,7 +21,6 @@ URLS_P_EXTENDIDO = {
                   }
 URL_ALERTAS = "https://ws.smn.gob.ar/alerts/type/AL"
 URL_ESTADO_ACTUAL = "https://ws.smn.gob.ar/map_items/weather"
-
 
 PROVINCIAS = {
         "BA": "Buenos Aires", "CA": "Catamarca", "CH":"Chubut",
@@ -61,8 +65,13 @@ def borrar_pantalla():
 
 def validar_entrada(numero_opciones):
     '''
-        Pre: Recibe la cantidad de opciones de entrada
-        Post: Retorna la opción validada de tipo int
+        Valida las opciones que el programa le entrega al usuario y
+        luego las convierte en tipo int.
+        #Parametros
+        numeros_opciones(int): Cantidad de opciones posibles
+        #Retorno
+        respuesta(int): La opción elegida por el usuario.
+
     '''
     respuesta = input("Ingrese su opción: ")
     while(not respuesta.isnumeric() or 0>=int(respuesta) or int(respuesta)>numero_opciones):
@@ -72,14 +81,25 @@ def validar_entrada(numero_opciones):
 
 def hallar_coordenadas(contorno_blanco, imagen_original):
     '''
-        Pre: Recibe la imagen original y los arrays del contorno, luego
-        halla los centroides en la imagen
-        Post: Retorna un diccionario con las coordenadas de las ciudades ubicadas en la imagen
+        Halla los centroides de los contornos blancos que representan las ciudades,
+        esto se logra mediante el metodo cv2.moments() dentro del for que utiliza
+        enumerate(contorno_blanco), es decir, enumero las iteraciones de los contornos.
+        Esto representa la cantidad de ciudades encontradas(16).
+        el metodo cv2.moments() retorna un diccionario con los momentos de la imagen,
+        donde solo me interesan las claves 'm00', 'm10', 'm01' con las cuales hallo
+        las coordenadas x e y de la imagen.
+
+        #Parametros 
+        contorno_blanco(numpy arrays): Contiene los arrays de los contornos de las ciudades.
+        imagen_original(numpy arrays): Contiene la imagen procesada como arrays de numpy.
+        #Retorno
+        Retorna un diccionario donde sus claves son el nombre de una ciudad y las coordenadas
+        de la misma.
     '''
     coordenadas = {}
     for (i,c) in enumerate(contorno_blanco):
         momentos_b = cv2.moments(c)
-        if(momentos_b['m00'] == 0):
+        if(momentos_b['m00'] == 0): #Evito divisiones por cero
             momentos_b['m00'] = 1
         coordenada_x_b = int(momentos_b['m10']/momentos_b['m00'])
         coordenada_y_b = int(momentos_b['m01']/momentos_b['m00'])
@@ -88,24 +108,46 @@ def hallar_coordenadas(contorno_blanco, imagen_original):
 
 def hallar_contornos_blancos(imagen_original):
     '''
-        Pre:Recibe la iamgen original, luego crea una mascara binaria
-        con el color blanco para hallar el contorno de las ciudades
-        Post: Retorna el contorno blanco en forma de arrays de numpy
+        Crea mascaras de color blanco(Usando la composición de colores BGR) usando cv2.inRange(..), hallando los pequeños circulos que
+        representan las ciudades en la imagen ingresada, usando cv2.findContours(..).
+        con cv2.morphologyEx(..) elimino el ruido que aparezca en la mascara, es decir
+        los pequeños puntos que interfieran con la  mascarad deseada.
+
+        #Nota:el guión de contorno,_ representa la jerarquía del contorno,
+        es decir, los contornos que están dentro de otro contorno, como no los necesito,
+        la librería me pide escribirlo de esa forma
+
+        #Parametros
+        imagen_original(nunpy array): La imagen procesada con cv2 son arrays de numpy
+        #Retorno
+        contorno(numpy array): La mascara que se devuelve está hecha con arrays de numpy
+
     '''
     mascara_blanca = cv2.inRange(imagen_original, BLANCO_BGR_MIN, BLANCO_BGR_MAX)
     mascara_blanca = cv2.morphologyEx(mascara_blanca, cv2.MORPH_CLOSE, KERNEL_CAP)
     mascara_blanca = cv2.morphologyEx(mascara_blanca, cv2.MORPH_OPEN, KERNEL_CAP)
-    contorno,_ = cv2.findContours(mascara_blanca, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contorno,_ = cv2.findContours(mascara_blanca, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE) 
     return contorno
 
-def analizar_tormenta(imagen_original, gama_baja, gama_alta, mensaje_meteoreologico, coordenadas_ciudades):
+def analizar_tormenta(imagen_original, gama_baja, gama_alta, mensaje_metereologico, coordenadas_ciudades):
     '''
-        Pre: Recibe la imagen_original, la gama baja de colores y la alta,
-        un mensaje de alerta dependiendo del color y las coordenadas de las 
-        ciudades en la imagen
-        Post: No retorna nada, halla las mascaras binarias color por color, luego
-        halla las coordenadas del color y halla las distancias de la ciudad respecto un color,
-        si esta cerca del color, lo muestra en pantalla       
+       Primero, convierte la imagen ingresada a la gama HSV de colores,
+       luego hace el mismo procedimiento que en hallar_contornos_blancos
+       (Hallar mascarás del color y filtraciones de ruido).
+        El primer for iterará en el diccionario coordenadas_ciudades
+        y el segundo en los contornos del color correspondiente.
+        Luego se hace un pequeño calculo de conversión de escalas 
+        y se muestra en pantalla que precipitaciones a las ciudades.
+
+        #Parametros
+        imagen_original(nunpy array): La imagen procesada con cv2 son arrays de numpy
+        gama_baja(numpy array): Limite inferior del color correspondiente, 
+        el array representa  [Tono, Saturación, Brillo]
+        gama_alta(numpy array): Limite superrior del color correspondiente, 
+        el array representa [Tono, Saturación, Brillo]
+        mensaje_metereologico(str): String que posee la precipitación indicada por el color
+        coordenadas_ciudades(dic): Diccionario que posee de clave el nombre de la ciudad y las coordenadas de la misma en la imagen
+
     '''
 
     imagen_hsv = cv2.cvtColor(imagen_original, cv2.COLOR_BGR2HSV)
@@ -129,21 +171,23 @@ def analizar_tormenta(imagen_original, gama_baja, gama_alta, mensaje_meteoreolog
             distancia_real = (norma * CONSTANTE_REGLA_3_SIMPLES)/100
             if(distancia_real <= 10  and aviso == False): #Si la distancia real es menor a 10km
                 aviso = True
-                print(f"Se aproximan {mensaje_meteoreologico} a la ciudad de {ciudad} a una distancia de {distancia_real} km")
+                print(f"Se aproximan {mensaje_metereologico} a la ciudad de {ciudad} a una distancia de {distancia_real} km")
     
 def iterar_colores():
     '''
-        Pre: Ninguna, carga la imagen y luego hace llamados de funciones para trabajar en la imagen
-        Post: Ninguno.
+        Verifica la existencia de la imagen en el directorio del programa,
+        si existe, empezará leyendo esa imagen con la librería OPEN-CV.
+        Luego, haré el llamado de la función analizar_tormenta dentro del for
+        con el cuál iteraré cada uno de los colores que aparezcan en la imagen.
+        Muestra la imagen de radar en una ventana emergente.
     '''   
-    ruta_imagen = os.getcwd() + '\\radar.png'
-    if(os.path.exists(ruta_imagen) == True):
+    if(os.path.exists(RUTA_IMAGEN) == True):
         imagen_original = cv2.imread("radar.png")
         contorno_blanco = hallar_contornos_blancos(imagen_original)
         coordenadas_ciudades = hallar_coordenadas(contorno_blanco, imagen_original)
-        for color in COLORES.values():
+        for color in COLORES.values(): #
             analizar_tormenta(imagen_original, color[0], color[1],color[2], coordenadas_ciudades)
-        print("Presione una tecla para cerrar la ventana...")
+        print("Se abrío una ventana con la imagen ingresada \n Presione una tecla para cerrar la ventana...")
         cv2.imshow("Imagen", imagen_original)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
@@ -479,11 +523,11 @@ def verificar_ciudad(respuesta_json, ubicacion_usuario):
         Post: Retorna un valor booleano indicando si la ciudad estaba en los datos json o no
     '''
     ciudad_encontrada = False
-    i = 0
-    while ciudad_encontrada == False and i < len(respuesta_json):
-        if ubicacion_usuario["Ciudad"] in respuesta_json[i]["name"]:
+    n_dic = 0
+    while ciudad_encontrada == False and n_dic < len(respuesta_json):
+        if ubicacion_usuario["Ciudad"] in respuesta_json[n_dic]["name"]:
             ciudad_encontrada = True
-        i += 1
+        n_dic += 1
     return ciudad_encontrada
 
 def mostrar_pronostico_provincia(respuesta_json, provincia):
@@ -512,22 +556,22 @@ def mostrar_pronostico_ciudad(respuesta_json, ciudad, provincia):
         Post: Muestra el pronóstico de la ciudad del usuario, debido a que fue encontrada en los datos json
     '''
     lista = respuesta_json
-    i = 0 
+    n_dic = 0 
     ciudad_encontrada = False
-    while ciudad_encontrada == False and i < len(respuesta_json):
-        if ciudad in lista[i]['name'] and provincia == lista[i]['province']:
+    while ciudad_encontrada == False and n_dic < len(respuesta_json):
+        if ciudad in lista[n_dic]['name'] and provincia == lista[n_dic]['province']:
             print("-"*80)
-            print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO DE LA CIUDAD DE: {lista[i]['name']}")
+            print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO DE LA CIUDAD DE: {lista[n_dic]['name']}")
             print("-"*80)
-            print(f"Fecha y Hora: {lista[i]['forecast']['date_time']}")
-            print(f"Temperatura mínima: {lista[i]['forecast']['forecast']['0']['temp_min']}°C")
-            print(f"Temperatura máxima: {lista[i]['forecast']['forecast']['0']['temp_max']}°C")
-            print(f"Humedad: {lista[i]['weather']['humidity']}% \nVelocidad del viento: {lista[i]['weather']['wind_speed']} km/h")
-            print(f"Pronóstico de la mañana: {lista[i]['forecast']['forecast']['0']['morning']['description']}")
-            print(f"Pronóstico de la tarde: {lista[i]['forecast']['forecast']['0']['afternoon']['description']}\n")
+            print(f"Fecha y Hora: {lista[n_dic]['forecast']['date_time']}")
+            print(f"Temperatura mínima: {lista[n_dic]['forecast']['forecast']['0']['temp_min']}°C")
+            print(f"Temperatura máxima: {lista[n_dic]['forecast']['forecast']['0']['temp_max']}°C")
+            print(f"Humedad: {lista[n_dic]['weather']['humidity']}% \nVelocidad del viento: {lista[n_dic]['weather']['wind_speed']} km/h")
+            print(f"Pronóstico de la mañana: {lista[n_dic]['forecast']['forecast']['0']['morning']['description']}")
+            print(f"Pronóstico de la tarde: {lista[n_dic]['forecast']['forecast']['0']['afternoon']['description']}\n")
             print("-"*80)
             ciudad_encontrada = True
-        i += 1
+        n_dic += 1
 
 def pronostico_usuario(ubicacion_usuario):
     '''
@@ -586,7 +630,7 @@ def alertas_nacionales():
 
 def mostrar_pronostico_extendido_ciudad(respuesta_json, ciudad, provincia, dia_pronostico):
     '''
-        Pre:Recibe los datos json de la url de pronosticos extendidos, la ciudad del usuario y el nuemero de dias desde la fecha.
+        Pre:Recibe los datos json de la url de pronosticos extendidos, la ciudad del usuario y el numero de dias desde la fecha.
         Post: Muestra el pronostico extendido de la ciudad del usuario, debido a que fue encontrada en los datos json
     '''
     for diccionario in respuesta_json:
@@ -660,8 +704,11 @@ def mostrar_alertas(ubicacion_usuario):
 
 def menu_de_acciones(opcion, ubicacion_usuario):
     '''
-        Pre: Opcion de tipo int y ubicación del usuario
-        Post: Ninguno.
+        Procedimiento que determina que camino seguir al programa mediante la opción ingresada
+        por el usuario.
+        #Parametros
+        opcion(int): La opcioón ingresada por el usuario
+        
     '''
     if opcion == 1:
         pronostico_usuario(ubicacion_usuario)
