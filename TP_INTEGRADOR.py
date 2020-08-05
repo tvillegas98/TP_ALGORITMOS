@@ -1,7 +1,6 @@
 import requests #URL
 from geopy.exc import GeocoderServiceError #Excepciones
 import os #Borrar pantalla
-from geopy.distance import geodesic #Medir distancias
 from geopy.geocoders import Nominatim #Geolocalización
 import pandas as pd #Leer csv
 import matplotlib.pyplot as plt #Mostrar graficos
@@ -387,60 +386,45 @@ def geolocalizacion_por_nombre():
     diccionario = {'Ciudad': ciudad, 'Provincia': provincia, 'Lugar': locacion}
     return diccionario
 
-def verificar_coordenadas(coordenadas):
-    """
-        Pre: Recibe una tupla con las coordenadas
-        Post: Devulve un diccionario con un booleano, segun si la conexion fue exitosa o no, y la ubicacion en forma de diccionario
-    """
-    conexion = False
-    ubicacion = None
-    coordenadas_validas = False
-    while coordenadas_validas == False:
-        try:
-            location = GEOLOCATOR.reverse(coordenadas)
-            ubicacion = location.raw
-            conexion = True
-            coordenadas_validas = True
-            
-        except GeocoderServiceError:
-            print('Fallo la conexión...')
-            coordenadas_validas = True
-        except TypeError:
-            print('Direccion invalida...')
-            coordenadas_validas = False
-        except ValueError:
-            print('Coordenadas invalidas, intente nuevamente')
-            coordenadas_validas = False
-
-        if coordenadas_validas == False:
-            latitud = input("lat: ")
-            longitud = input('long: ')
-            coordenadas = (latitud, longitud)
-
-    diccionario = {'conexion': conexion, 'ubicacion': ubicacion}
-    return diccionario
-
 def geolocalizacion_por_coordenadas():
     """
         Post: Devuelve la ciudad y la provincia de una lat y long ingresados en un diccionario, ante un error retorna None
     """
     print('Ingrese a continuacion las coordenadas')
-    latitud = input('Latitud: ')
-    longitud = input('Longitud: ')
-    coordenadas = (latitud, longitud)
-    
-    geolocalizacion = verificar_coordenadas(coordenadas)
+    coordenadas_validas = False
+    while not coordenadas_validas:
+        try:
+            latitud = float(input('Latitud: '))
+            if latitud <= 90 and latitud >= -90:
+                longitud = float(input('Longitud: '))
+                coordenadas = (latitud, longitud)
+                coordenadas_validas = True
+            else:
+                print('La latitud debe estar en el rango [90, -90]')
+        except ValueError:
+            print('Entrada invalida, intente nuevamente...')
+            coordenadas_validas = False
+            
+    ubicacion = None
+    locacion =  None
+    try:
+        locacion = GEOLOCATOR.reverse(coordenadas)
+        ubicacion = locacion.raw
+    except TypeError:
+        print('No se encontró la ubicación...')
+    except GeocoderServiceError:
+        print('Fallo la conexión...')
+
     ciudad = None
     provincia = None
-    if geolocalizacion['conexion'] == True:
-        ubicacion = geolocalizacion['ubicacion']
+    if ubicacion != None:
         if 'address' in ubicacion:
             if 'state' in ubicacion['address']:
                 provincia = ubicacion['address']['state']
             if 'city' in ubicacion['address']:
                 ciudad = ubicacion['address']['city']
 
-    diccionario = {'Ciudad': ciudad, 'Provincia': provincia}
+    diccionario = {'Ciudad': ciudad, 'Provincia': provincia, 'Lugar': locacion}
     return diccionario
 
 def hallar_al_usuario_manualmente():
@@ -550,7 +534,7 @@ def pronostico_usuario(ubicacion_usuario):
         Pre: Recibe el diccionario con la ubicación del usuario
         Post: Ninguno, sigue una serie de procesos para mostrar el pronóstico de la locación del usuario
     '''
-    conexion = verificar_conexion("https://ws.smn.gob.ar/map_items/weather") 
+    conexion = verificar_conexion(URL_ESTADO_ACTUAL) 
     conexion_exitosa = conexion['conexion']
 
     if conexion_exitosa == True:
@@ -569,7 +553,7 @@ def alertas_nacionales():
         Pre:Ninguno, primero recibe los datos de la url indicada en el modulo y luego las muestra
         Post:Niguno, muestra las alertas a nivel nacional
     '''
-    conexion = verificar_conexion("https://ws.smn.gob.ar/alerts/type/AL") 
+    conexion = verificar_conexion(URL_ALERTAS) 
     conexion_exitosa= conexion['conexion']
     
     if conexion_exitosa == True:
@@ -628,15 +612,9 @@ def pronostico_extendido(ubicacion_usuario):
         Pre: Recibe el diccionario con la ubicación del usuario
         Post: Ninguno, sigue una serie de procesos para mostrar el pronóstico extendido de la locación del usuario
     '''
-    pronosticos = {
-                    'dia1': "https://ws.smn.gob.ar/map_items/forecast/1", 
-                    'dia2': "https://ws.smn.gob.ar/map_items/forecast/2", 
-                    'dia3': "https://ws.smn.gob.ar/map_items/forecast/3"
-                  }
-
     contador = 1
-    for ruta in pronosticos:
-        conexion = verificar_conexion(pronosticos[ruta]) 
+    for ruta in URLS_P_EXTENDIDO:
+        conexion = verificar_conexion(URLS_P_EXTENDIDO[ruta]) 
         conexion_exitosa = conexion['conexion']
 
         if conexion_exitosa == True:
@@ -658,40 +636,25 @@ def mostrar_alertas(ubicacion_usuario):
         Pre: Recibe la localizacion 
         Post: Muestra las alertas para la localizacion ingresada
     '''
-    conexion = verificar_conexion("https://ws.smn.gob.ar/alerts/type/AL") 
+    conexion = verificar_conexion(URL_ALERTAS) 
     conexion_exitosa= conexion['conexion']
 
     if conexion_exitosa == True:
         respuesta_json = conexion['respuesta'].json()
         localizacion = ubicacion_usuario['Provincia']
-        terminar = False
 
-        while terminar == False:
-            contador = 1
-            for diccionario in respuesta_json:
-                for region in diccionario['zones']:
-                    if localizacion in diccionario['zones'][region]:
-                       print("-"*80)
-                       print(f'ALERTA NÚMERO° {contador}: {diccionario["zones"][region]}\n')
-                       print(f'Fecha: {diccionario["date"]} Hora: {diccionario["hour"]}\n')
-                       print(f'Descripción: {diccionario["description"]}\n')
-                       print("-"*80)
-                       contador += 1
-            if contador == 1:
-                print(f'\nNo hay alertas para {localizacion}\n')
-            print('1. Si desea ver alertas para otra ubicacion por geolocalización')
-            print('2. Para regresar')
-            opcion = validar_entrada(2)
-            if opcion == 1:
-                diccionario = geolocalizacion_por_coordenadas()
-                localizacion = diccionario['Provincia']
-                if localizacion == None:
-                    print('No se encontró la ubicación...')
-                    terminar = True
-                else:
-                    terminar = False
-            else:
-                terminar = True
+        contador = 1
+        for diccionario in respuesta_json:
+            for region in diccionario['zones']:
+                if localizacion in diccionario['zones'][region]:
+                   print("-"*80)
+                   print(f'ALERTA NÚMERO° {contador}: {diccionario["zones"][region]}\n')
+                   print(f'Fecha: {diccionario["date"]} Hora: {diccionario["hour"]}\n')
+                   print(f'Descripción: {diccionario["description"]}\n')
+                   print("-"*80)
+                   contador += 1
+        if contador == 1:
+            print(f'\nNo hay alertas para {localizacion}\n')
     else:
         print('No se pudo establecer conexion con el Servicio Meteorológico Nacional.')
 
