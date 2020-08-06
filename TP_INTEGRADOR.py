@@ -8,7 +8,7 @@ import os.path #Chequear existencia de archivo csv
 from geopy.exc import GeocoderServiceError #Excepciones
 from geopy.distance import geodesic #Medir distancias
 from geopy.geocoders import Nominatim #Geolocalización
-from matplotlib.ticker import MultipleLocator #Arreglar ejer de grafico
+from matplotlib.ticker import MultipleLocator #Arreglar ejes de grafico
 
 GEOLOCATOR = Nominatim(user_agent = 'TP_ALGORITMOS')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -228,15 +228,15 @@ def arreglo_label(anio_dias, datos,palabra):
     Post:Devuelve una cadena de caracteres.
     '''
     texto_label = ""
-    simbolo=""
-    if palabra=="MaxTemperature":
-        simbolo="°C"
-    elif palabra=="Relative Humidity":
-        simbolo="%"
-    elif palabra=="Precipitation":
-        simbolo="mm"
+    simbolo = ""
+    if palabra == "MaxTemperature":
+        simbolo = "°C"
+    elif palabra == "Relative Humidity":
+        simbolo = "%"
+    elif palabra =="Precipitation":
+        simbolo = "mm"
     for i in range(0,len(anio_dias)):
-        texto_label+= str(anio_dias[i]) + ": " + str(datos[i]) + simbolo+"\n"
+        texto_label += str(anio_dias[i]) + ": " + str(datos[i]) + simbolo + "\n"
     return texto_label
 
 def dibujar_grafico(datos,anios,busqueda):
@@ -273,7 +273,7 @@ def dibujar_grafico(datos,anios,busqueda):
         plt.title("Temperatura Maxima",color="red")
         plt.ylabel("Temperatura",color="red")
         plt.xlabel("Dias",color="red")
-    #mostrar
+    #Mostrar
     plt.legend()
     plt.show()
     
@@ -301,8 +301,8 @@ def temperatura_milimetros_maximos(anio, historico, busqueda):
     Reduce aun mas el dataframe para optimizar el uso y prepara las condiciones para la lectura de datos necesarios.
     Post:No retorna algo.
     '''
-    dias=[]
-    datos=[]
+    dias = []
+    datos = []
     historico["MaxTemperature"]=historico["Max Temperature"]
     historico = historico.drop(["Relative Humidity","Max Temperature","Min Temperature"], axis=1)
     historico["Dia"]=historico["Date"].astype(str)
@@ -319,7 +319,7 @@ def promedia_temperatura_humedad(promedios,cantidad_dias,datos,busqueda,anio):
     '''
     for i in range(0,len(anio)):
         if busqueda=="MaxTemperature":
-            promedios.loc[i,"Promedio Temperatura"]=promedios.loc[i,"Promedio Temperatura"]//(cantidad_dias[i]*2)
+            promedios.loc[i,"Promedio Temperatura"] = promedios.loc[i,"Promedio Temperatura"]//(cantidad_dias[i]*2)
             datos.append(promedios.loc[i,"Promedio Temperatura"])
         elif busqueda=="Relative Humidity":
             promedios.loc[i,"Relative Humidity"]=promedios.loc[i,"Relative Humidity"]*100//(cantidad_dias[i])
@@ -331,10 +331,10 @@ def promedio_temperatura_humedad(anio, cantidad_dias, historico,busqueda):
     Crea las condiciones dentro del dataframe para el mejor manejo y lectura de datos concisos.
     post:No retorna algo
     '''
-    datos=[]
+    datos = []
     historico = historico.drop(["anio","Precipitation"], axis=1)    
-    promedios= historico.resample("Y", on="Date").sum()
-    promedios["Promedio Temperatura"]= (promedios["Max Temperature"] + promedios["Min Temperature"])
+    promedios = historico.resample("Y", on="Date").sum()
+    promedios["Promedio Temperatura"] = (promedios["Max Temperature"] + promedios["Min Temperature"])
     promedios.reset_index(inplace=True)
     promedia_temperatura_humedad(promedios,cantidad_dias,datos,busqueda,anio)
     dibujar_grafico(datos,anio,busqueda)
@@ -409,24 +409,18 @@ def validar_csv(nombre_csv):
             archivo.seek(0)
             archivo.writelines(texto)
             
-def chequear_existencia_csv(nombre_csv):
-    """
-    Precondicion: Verifica que el csv pasado en la constante nombre_csv exista.
-    PostCondicion: Retorna True si el csv existe y False si no existe, para luego procesar los datos que contiene
-    """
-    return os.path.exists(nombre_csv)
 
-def verificar_csv_valido(nombre_csv,csv_headers):
+def verificar_csv_valido(csv_headers):
     """
     Precondicion: Si el csv existe, verifica que los datos que contenga sean correctos y no este vacio, ademas verifica
     que los headers que utilizaremos esten en el documento.
     PostCondicion: Retorna True si el csv es correcto y False si no lo es.
     """
-    if not chequear_existencia_csv(nombre_csv):
+    if not os.path.exists(RUTA_CSV):
         return False
     try:
-        validar_csv(nombre_csv)
-        with open(nombre_csv, "r") as mi_csv:
+        validar_csv('tabla_de_datos.csv')
+        with open('tabla_de_datos.csv', "r") as mi_csv:
             texto = mi_csv.readlines()
     except OSError as err:
         print(f"No se pudo abrir o leer el csv {err}")
@@ -447,12 +441,11 @@ def inicio_csv():
     al realizar las validaciones a traves de funciones
     Post:No retorna algo.
     '''
-    nombre_csv = "tabla_de_datos.csv"
     csv_headers = ("Date","Max Temperature","Min Temperature","Precipitation","Relative Humidity")
-    accion = verificar_csv_valido(nombre_csv,csv_headers)
-    if accion==True:
-        historico = pd.read_csv(nombre_csv)
-        inicio(nombre_csv,csv_headers,historico)      
+    csv_validado = verificar_csv_valido(csv_headers)
+    if csv_validado == True:
+        historico = pd.read_csv('tabla_de_datos.csv')
+        inicio('tabla_de_datos.csv', csv_headers, historico)      
     
 def ubicar_provincia():
     '''
@@ -655,7 +648,7 @@ def mostrar_pronostico_ciudad(lista_pronosticos):
         Pre: Recibe una lista que contiene al menos un diccionario proveniente de los datos json de la url weather
         Post: Muestra el pronostico da la o las ciudades
         #Parametros
-        lista_pronosticos, lista. Compuesta por diccionarions
+        lista_pronosticos(list): Una lista compuesta por diccionarios
     '''
     for ciudad in lista_pronosticos:
         print("-"*80)
@@ -673,6 +666,7 @@ def pronostico_usuario(ubicacion_usuario):
     '''
         Si la ciudad fue encontrada, se mostrarán en pantalla los correspondientes avisos
         en caso de que no haya conexión con el SMN, se le avisará al usuario
+
         #Parametros
         ubicacion_usuario(dicc): Contiene la ubicación del usuario en los valores de las claves
     '''
@@ -711,7 +705,7 @@ def alertas_nacionales():
         for (contador,alertas) in enumerate(respuesta_json):
             zonas = [zona for zona in alertas['zones'].values()]
             print("-"*80)
-            print(f"AVISO NÚMERO°{contador}")
+            print(f"AVISO NÚMERO°{contador+1}")
             print("-"*80)
             print(f"Titulo: {alertas['title']} \nFecha: {alertas['date']} \nHora: {alertas['hour']}")
             print(f"Aviso: {alertas['description']} \n Zonas afectadas: {zonas[0::]}")
@@ -724,9 +718,10 @@ def alertas_nacionales():
 
 def mostrar_pronostico_extendido_ciudad(lista_pronostico, dia_pronostico):
     '''
-        Pre: Recibe una lista de diccionarios y el numero de dias desde la fecha.
-        Post: Mostrará en pantalla los pronósticos extendidos de la ciudad del usuario o de la ciudad
-              con el nombre más similar a ella.
+        Recorre la 
+        Mostrará en pantalla los pronósticos extendidos de la ciudad del usuario o de la ciudad
+        con el nombre más similar a ella.
+
         #Parametros
         lista_pronostico: Lista de diccionarios provenientes del JSON de la URL_P_EXTENDIDO
         dia_pronostico(int): El día del pronóstico extendido
