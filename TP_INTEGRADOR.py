@@ -4,9 +4,11 @@ import pandas as pd #Leer csv
 import matplotlib.pyplot as plt #Mostrar graficos
 import cv2 #Analisis de imagen
 import numpy as np #Analisis de imagen
+import os.path #Chequear existencia de archivo csv
 from geopy.exc import GeocoderServiceError #Excepciones
 from geopy.distance import geodesic #Medir distancias
 from geopy.geocoders import Nominatim #Geolocalización
+from matplotlib.ticker import MultipleLocator #Arreglar ejer de grafico
 
 GEOLOCATOR = Nominatim(user_agent = 'TP_ALGORITMOS')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -219,140 +221,154 @@ def verificar_conexion(ruta):
     diccionario_respuesta = {'respuesta': respuesta, 'conexion': valor}
     return diccionario_respuesta
 
-def grafico_caracteristicas_precipitacion(años,datos):
+def arreglo_label(anio_dias, datos,palabra):
     '''
-        Pre:Recibe una lista con los años, una lista datos para ubicarlos en el grafico.
-        Post:Ninguna, demarca instrucciones en el grafico a mostrar la funcion que le llama.
+    Pre:Recibe una lista ya sea con año o dias y una palabra que le permitira agregar el simbolo correcto al texto.
+    Arregla el texto que se mostrara en la legenda.
+    Post:Devuelve una cadena de caracteres.
     '''
-    plt.bar(años[0],datos[0], label= f"{datos[0]}Mm", width=0.5, color = "blue")
-    plt.bar(años[1],datos[1], label= f"{datos[1]}Mm", width=0.5, color = "orange")
-    plt.bar(años[2],datos[2], label= f"{datos[2]}Mm", width=0.5, color = "black")
-    plt.bar(años[3],datos[3], label= f"{datos[3]}Mm", width=0.5, color = "pink")
-    plt.bar(años[4],datos[4], label= f"{datos[4]}Mm", width=0.5, color = "red")    
+    texto_label = ""
+    simbolo=""
+    if palabra=="MaxTemperature":
+        simbolo="°C"
+    elif palabra=="Relative Humidity":
+        simbolo="%"
+    elif palabra=="Precipitation":
+        simbolo="mm"
+    for i in range(0,len(anio_dias)):
+        texto_label+= str(anio_dias[i]) + ": " + str(datos[i]) + simbolo+"\n"
+    return texto_label
 
-def grafico_caracteristicas_humedad(años,datos):
+def dibujar_grafico(datos,anios,busqueda):
     '''
-        Pre:Recibe una lista con las fechas, una lista datos para ubicarlos en el grafico.
-        Post:Ninguna, demarca instrucciones en el grafico a mostrar la funcion que le llama.
+    Pre: Recibe dos listas, uno con los datos a proyectar y otra con los años o dias, arregla el grafico para mostrarlo
+    Post:Muestra por pantalla una grafico de lineas.
     '''
-    plt.bar(años[0],datos[0], label= f"{datos[0]}%", width=0.5, color = "blue")
-    plt.bar(años[1],datos[1], label= f"{datos[1]}%", width=0.5, color = "orange")
-    plt.bar(años[2],datos[2], label= f"{datos[2]}%", width=0.5, color = "black")
-    plt.bar(años[3],datos[3], label= f"{datos[3]}%", width=0.5, color = "pink")
-    plt.bar(años[4],datos[4], label= f"{datos[4]}%", width=0.5, color = "red")
-
-def grafico_caracteristicas_temperatura(años,datos):
-    '''
-        Pre:Recibe una lista con los años o fechas, una lista datos para ubicarlos en el grafico.
-        Post:Ninguna, demarca instrucciones en el grafico a mostrar la funcion que le llama.
-    '''
-    plt.bar(años[0],datos[0], label= f"{datos[0]}°C", width=0.5, color = "blue")
-    plt.bar(años[1],datos[1], label= f"{datos[1]}°C", width=0.5, color = "orange")
-    plt.bar(años[2],datos[2], label= f"{datos[2]}°C", width=0.5, color = "black")
-    plt.bar(años[3],datos[3], label= f"{datos[3]}°C", width=0.5, color = "pink")
-    plt.bar(años[4],datos[4], label= f"{datos[4]}°C", width=0.5, color = "red")
-    
-def estudio_datos_max(años,datos,busqueda, historico):
-    '''
-        Pre:Recibe una lista con los años, una lista datos para colocar los maximos, una palabra para
-        hacer la busqueda en el dataframe.
-        Post:Ninguna, deja a la funcion que le llama con la lista datos a utilizar completa y la lista
-        años con la fecha con maxima temperatura.
-    '''
-    fechas = [0,0,0,0,0]#Fecha en que hubo mayor temperatura y mayor milimetros de lluvia
-    for i in range(0,len(historico["Date"])):
-        read = historico["Date"][i]
-        posicion = 0
-        
-        for año in años:
-            if año in read:
-                posicion = años.index(año)
-                
-        if historico[busqueda][i]>datos[posicion]:
-            datos[posicion]=historico[busqueda][i]#temperatura o milimetros de lluvia maximo en dia
-            fechas[posicion]=historico["Date"][i]
-            
-        if i==len(historico["Date"])-1:
-            for i in range(0,len(fechas)):
-                años[i]=fechas[i]
-
-def estudio_datos_promedios(años,datos,busqueda,historico):
-    '''
-        Pre:Recibe una lista con los años, una lista datos para sumar los datos, una palabra para
-        hacer la busqueda en el dataframe.
-        Post:Ninguna, deja a la funcion que le llama con la lista datos a utilizar completa.
-    '''
-    cantidad_dias = [0,0,0,0,0]
-    for i in range(0,len(historico["Date"])-1):
-        read = historico["Date"][i]
-        posicion = 0
-        for año in años:
-            if año in read:
-                posicion = años.index(año)
-        datos[posicion] += historico[busqueda][i]
-        cantidad_dias[posicion] += 1
-        
-    for i in range (0,len(cantidad_dias)):
-        datos[i] = datos[i]/cantidad_dias[i]
-                
-def temperatura_lluvia_max(historico,busqueda):
-    '''
-        Pre:Recibe un dataframe y una palabra para estudiar una columna en el dataframe.
-        Post:Muestra en pantalla un grafico.
-    '''
-    años = ["2013","2014","2015","2016","2017"]
-    datos=[0,0,0,0,0]
-    estudio_datos_max(años,datos,busqueda,historico)
-    if busqueda=="Precipitation":
-        #Caractersticas del grafico
-        grafico_caracteristicas_precipitacion(años,datos)
-        #titulo y nombre de ejes
-        plt.title("Dia Maximo en mm de lluvia")
-        plt.ylabel("Mm de lluvia")
-        plt.xlabel("Dia")
-        #mostrar
-        plt.legend()
-        plt.show()
-    elif busqueda == "Max Temperature" :
-        #Caractersticas del grafico
-        grafico_caracteristicas_temperatura(años,datos)
-        #titulo y nombre de ejes
-        plt.title("Dia con max temperatura en un año")
-        plt.ylabel("Temperatura")
-        plt.xlabel("Dia")
-        #mostrar
-        plt.legend()
-        plt.show()
-        
-        
-def temperatura_humedad(historico,busqueda):
-    '''
-        Pre:Recibe un dataframe y una palabra para estudiar una columna en el dataframe.
-        Post:Muestra en pantalla un grafico.
-    '''
-    años = ["2013","2014","2015","2016","2017"]
-    datos= [0,0,0,0,0]
-    estudio_datos_promedios(años,datos,busqueda,historico)
-    if busqueda == "Relative Humidity": 
-        datos = list(map(lambda x:x*100//1, datos))
-    #Caracteristicas del grafico
-    if busqueda == "Max Temperature":
-        grafico_caracteristicas_temperatura(años,datos)
-    else:
-        grafico_caracteristicas_humedad(años,datos)
+    #Dibujar grafico
+    label = arreglo_label(anios, datos,busqueda)
+    fig, ax = plt.subplots()
+    g = ax.plot(anios,datos)
+    ax.xaxis.set_major_locator(MultipleLocator(1))
+    g[0].set_label(f"{label}")
+    g[0].set_marker(".")
+    g[0].set_markersize(12)
     #titulo y nombre de ejes
-    plt.title(f"Promedio de {busqueda}")
-    plt.ylabel(busqueda)
-    plt.xlabel("Año")
+    if busqueda=="MaxTemperature":
+        g[0].set_color("blue")
+        plt.title("Promedio de Temperatura", color="blue")
+        plt.ylabel("Temperatura", color="blue")
+        plt.xlabel("Año", color="blue")
+    elif busqueda=="Relative Humidity":
+        g[0].set_color("red")
+        plt.title("Promedio de Humedad", color="red")
+        plt.ylabel("Humedad", color="red")
+        plt.xlabel("Año", color="red")
+    elif busqueda=="Precipitation":
+        g[0].set_color("red")
+        plt.title("Milimetros Maximos de lluvia",color="blue")
+        plt.ylabel("Milimetros",color="blue")
+        plt.xlabel("Dias",color="blue")
+    elif busqueda=="TemperaturaMax":
+        g[0].set_color("red")
+        plt.title("Temperatura Maxima",color="red")
+        plt.ylabel("Temperatura",color="red")
+        plt.xlabel("Dias",color="red")
     #mostrar
     plt.legend()
-    plt.show()   
+    plt.show()
+    
+    
+def temperatura_lluvia_maxima(anio,datos,dias,historico,busqueda):
+    '''
+    Pre:Recibe 3 listas, una con los años de estudio y otras dos vacias para ser llenadas, un dataframe
+    y una palabra para filtrar. llena las listas con la humedad o temperatura maxima y el dia en que esto ocurrio por año.
+    Post:No retorna algo.
+    '''
+    for i in range(0,len(anio)):
+        nuevo = historico[historico.anio.isin([anio[i]])]
+        valor = nuevo[busqueda].max()
+        if busqueda=="Precipitation":
+            nuevo = nuevo[nuevo.Precipitation.isin([valor])]
+        elif busqueda=="MaxTemperature":
+            nuevo = nuevo[nuevo.MaxTemperature.isin([valor])]
+        posicion=nuevo.index[nuevo[busqueda]==valor].tolist()
+        dias.append(nuevo.loc[posicion[0],"Dia"])
+        datos.append(valor)
+    
+def temperatura_milimetros_maximos(anio, historico, busqueda):
+    '''
+    Pre:Recibe una lista con los años a trabajar, un dataframe con los datos y una palabra para filtrar.
+    Reduce aun mas el dataframe para optimizar el uso y prepara las condiciones para la lectura de datos necesarios.
+    Post:No retorna algo.
+    '''
+    dias=[]
+    datos=[]
+    historico["MaxTemperature"]=historico["Max Temperature"]
+    historico = historico.drop(["Relative Humidity","Max Temperature","Min Temperature"], axis=1)
+    historico["Dia"]=historico["Date"].astype(str)
+    temperatura_lluvia_maxima(anio,datos,dias,historico,busqueda)
+    datos = list(map(lambda x:x//1, datos))
+    dibujar_grafico(datos,dias,busqueda)
 
-def iniciar_csv(historico):
+    
+def promedia_temperatura_humedad(promedios,cantidad_dias,datos,busqueda,anio):
     '''
-        Pre:Recibe el archivo csv
-        Post:Muestra en pantalla las opciones a usuario.
+    Pre:Recibe un dataframe con datos sumados para poder promediarlos con la cantidad de dias, y agregarla a la lista de datos.
+    Recibe una palabra para dicernir lo que se desea promediar. 
+    Post:No retorna algo
     '''
+    for i in range(0,len(anio)):
+        if busqueda=="MaxTemperature":
+            promedios.loc[i,"Promedio Temperatura"]=promedios.loc[i,"Promedio Temperatura"]//(cantidad_dias[i]*2)
+            datos.append(promedios.loc[i,"Promedio Temperatura"])
+        elif busqueda=="Relative Humidity":
+            promedios.loc[i,"Relative Humidity"]=promedios.loc[i,"Relative Humidity"]*100//(cantidad_dias[i])
+            datos.append(promedios["Relative Humidity"][i])
+    
+def promedio_temperatura_humedad(anio, cantidad_dias, historico,busqueda):
+    '''
+    pre:Recibe una lista con los años a trabajar, la cantidad de dias de cada año, un dataframe y una palabra para fitrar.
+    Crea las condiciones dentro del dataframe para el mejor manejo y lectura de datos concisos.
+    post:No retorna algo
+    '''
+    datos=[]
+    historico = historico.drop(["anio","Precipitation"], axis=1)    
+    promedios= historico.resample("Y", on="Date").sum()
+    promedios["Promedio Temperatura"]= (promedios["Max Temperature"] + promedios["Min Temperature"])
+    promedios.reset_index(inplace=True)
+    promedia_temperatura_humedad(promedios,cantidad_dias,datos,busqueda,anio)
+    dibujar_grafico(datos,anio,busqueda)
+    
+def cantidad_anio(anio, cantidad_dias, historico,csv_headers):
+    '''
+    Pre: Recibe dos listas vacias que llenara con los años y cantidad de dias de cada años desde el dataframe,
+    un dataframe y una tupla con los headers a trabajar.
+    Post:Devuelve un dataframe solo con las columnas que se utilizaran, la fecha como datatime, una columna con los años.
+    '''
+    historico["Date"] = pd.to_datetime(historico["Date"])  # La columna Date ahora la tenemos en formato fecha para que la utilicemos con pandas
+    historico = historico.loc[:, csv_headers]  # Nos quedamos solo con los datos que trabajaremos
+    historico["anio"] = historico["Date"].dt.year  # Agregamos una columna de anio segun la columna Date
+    anio_maximo = historico["anio"].max()
+    anio_minimo = historico["anio"].min()
+    cantidad = historico.groupby("anio").count()
+    for i in range(0, 5):
+        if anio_maximo - i >= anio_minimo:
+            cantidad_dias.append(cantidad["Date"][anio_maximo - i])
+            anio.append(anio_maximo - i)
+    anio.reverse()
+    cantidad_dias.reverse()
+    historico = historico[historico["anio"] >= int(anio[0])]
+    historico = historico.sort_values("anio")
+    return historico 
+
+def inicio(nombre_csv,csv_headers,historico):
+    '''
+    pre:Recibe dos variables con el nombre del documento y el nombre de las columnas a utilizar.
+    post:Muestra por pantalla las opciones disponibles para el usuario.
+    '''
+    anio = []
+    cantidad_dias = []
+    historico = cantidad_anio(anio, cantidad_dias, historico,csv_headers)
     entrada = True  
     while entrada == True:
         print("\n------GRAFICADORA DE ARCHIVOS CSV------\n")
@@ -365,32 +381,79 @@ def iniciar_csv(historico):
         print("Cargando...")
         borrar_pantalla()
         if opcion == 1:
-            busqueda = "Max Temperature"
-            temperatura_humedad(historico,busqueda)
+            promedio_temperatura_humedad(anio, cantidad_dias, historico,"MaxTemperature")
         elif opcion == 2:
-            busqueda = "Relative Humidity"
-            temperatura_humedad(historico,busqueda)
+            promedio_temperatura_humedad(anio, cantidad_dias, historico,"Relative Humidity")
         elif opcion == 3:
-            busqueda="Precipitation"
-            temperatura_lluvia_max(historico,busqueda)
+            temperatura_milimetros_maximos(anio, historico, "Precipitation")
         elif opcion == 4:
-            busqueda="Max Temperature"
-            temperatura_lluvia_max(historico,busqueda)
+            temperatura_milimetros_maximos(anio, historico, "MaxTemperature")
         elif opcion == 5:
             entrada = False
 
-def archivo_csv():
+def validar_csv(nombre_csv):
     '''
-        Pre: Verifica si el archivo csv está en la carpeta
-        Post: Muestra en pantalla un mensaje de no encontrar el archivo.
+    Pre:Recibe el nombre del csv, y verifica que la fila no termine en coma
+    para eevitar errores de lectura.
+    Post:valida que la primer fila del csv termine sin coma, de terminar con coma agrega un nombre a la ultima columna.
     '''
-    ruta_csv = os.getcwd() + '\\tabla_de_datos.csv'
-    if(os.path.exists(ruta_csv) == True):
-        historico = pd.read_csv("tabla_de_datos.csv")
-        iniciar_csv(historico)
-    else:
-        print("No existe o no se ha encontrado el archivo en el directorio")
+    with open(nombre_csv, "r+") as archivo:
+        texto = archivo.readlines()
+        estudio = texto[0]
+        estudio = estudio.rstrip(" \n")
+        estudio = estudio.split('"')
+        if estudio[(len(estudio)) - 1] == "," or estudio[(len(estudio)) - 1] == ", ":
+            estudio.append('Null"\n')
+            estudio = '"'.join(estudio)
+            texto[0] = estudio
+            archivo.seek(0)
+            archivo.writelines(texto)
+            
+def chequear_existencia_csv(nombre_csv):
+    """
+    Precondicion: Verifica que el csv pasado en la constante nombre_csv exista.
+    PostCondicion: Retorna True si el csv existe y False si no existe, para luego procesar los datos que contiene
+    """
+    return os.path.exists(nombre_csv)
 
+def verificar_csv_valido(nombre_csv,csv_headers):
+    """
+    Precondicion: Si el csv existe, verifica que los datos que contenga sean correctos y no este vacio, ademas verifica
+    que los headers que utilizaremos esten en el documento.
+    PostCondicion: Retorna True si el csv es correcto y False si no lo es.
+    """
+    if not chequear_existencia_csv(nombre_csv):
+        return False
+    try:
+        validar_csv(nombre_csv)
+        with open(nombre_csv, "r") as mi_csv:
+            texto = mi_csv.readlines()
+    except OSError as err:
+        print(f"No se pudo abrir o leer el csv {err}")
+        return False
+    except BaseException as err:    # Las excepciones son clases, y esta es la clase madre de todos los errores
+        print(f"Ocurrio un error desconocido {err}")
+        return False
+    if not texto or len(texto) < 2:
+        return False
+    for i in csv_headers:
+        if i not in texto[0]:
+            return False
+    return True
+
+def inicio_csv():
+    '''
+    Pre:Define como constantes el nombre del csv asi como los headers a utilzar y da inicio al programa
+    al realizar las validaciones a traves de funciones
+    Post:No retorna algo.
+    '''
+    nombre_csv = "tabla_de_datos.csv"
+    csv_headers = ("Date","Max Temperature","Min Temperature","Precipitation","Relative Humidity")
+    accion = verificar_csv_valido(nombre_csv,csv_headers)
+    if accion==True:
+        historico = pd.read_csv(nombre_csv)
+        inicio(nombre_csv,csv_headers,historico)      
+    
 def ubicar_provincia():
     '''
         Le pide al usuario que ingrese la abreviatura de su provincia
@@ -761,7 +824,7 @@ def menu_de_acciones(opcion, ubicacion_usuario):
     elif opcion == 3:
         alertas_nacionales()
     elif  opcion == 4:
-        archivo_csv()
+        inicio_csv()
     elif opcion == 5:
         pronostico_extendido(ubicacion_usuario)
     elif(opcion == 6):
