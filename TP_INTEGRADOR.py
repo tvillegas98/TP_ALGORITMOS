@@ -4,7 +4,6 @@ import pandas as pd #Leer csv
 import matplotlib.pyplot as plt #Mostrar graficos
 import cv2 #Analisis de imagen
 import numpy as np #Analisis de imagen
-import os.path #Chequear existencia de archivo csv
 from geopy.exc import GeocoderServiceError #Excepciones
 from geopy.distance import geodesic #Medir distancias
 from geopy.geocoders import Nominatim #Geolocalización
@@ -605,9 +604,17 @@ def hallar_usuario():
 
 def verificar_ciudad(respuesta_json, ciudad, provincia):
     '''
-        Pre: Recibe un json de la url weather, la ciudad y la provincia del usuario
-        Post: Retorna una lista de diccionarios. Esta, contiene un solo diccionarion si se encotro la ciudad exacta, 
-              o, los diccionarios de todas las ciudades parecidas en la misma provincia
+        Verifica si la ciuda del usuario está en el archivo JSON entregado
+        por la URL de estado actual, también si el usuario ingresó 
+        el nombre de una ciudad incompleta, se verificará las ciudades más similares
+
+        #Parametros
+        respuesta_json(dicc): Diccionarios entregados por la url de estado actual
+        ciudad(str): El nombre de la ciudad del usuario
+        provincia(str): El nombre de la provincia del usuario
+        #Retorno
+        lista(list): Una lista de diccionarios que retorna la ciudad
+        o las ciudades más similares a la del usuario 
     '''
     ciudad_encontrada = False
     lista = []
@@ -645,8 +652,8 @@ def mostrar_pronostico_provincia(respuesta_json, provincia):
 
 def mostrar_pronostico_ciudad(lista_pronosticos):
     '''
-        Pre: Recibe una lista que contiene al menos un diccionario proveniente de los datos json de la url weather
-        Post: Muestra el pronostico da la o las ciudades
+        Recibe una lista que contiene al menos un diccionario proveniente de los datos json de la url weather.
+        Muestra el pronostico para la ciudad del usuario o similares.
         #Parametros
         lista_pronosticos(list): Una lista compuesta por diccionarios
     '''
@@ -718,7 +725,7 @@ def alertas_nacionales():
 
 def mostrar_pronostico_extendido_ciudad(lista_pronostico, dia_pronostico):
     '''
-        Recorre la 
+        Recorre la lista lista_pronostico, donde en ella hay diccionarios
         Mostrará en pantalla los pronósticos extendidos de la ciudad del usuario o de la ciudad
         con el nombre más similar a ella.
 
@@ -861,5 +868,5 @@ def main():
             cerrar_programa = True
         else:
             cerrar_programa = False
-    print('Fin del programa\nHasta la proxima!')
+    print('Fin del programa\n¡Hasta la proxima!')
 main()
