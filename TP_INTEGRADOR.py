@@ -1,6 +1,5 @@
 import requests #URL
-import os #Borrar pantalla
-from geopy.geocoders import Nominatim #Geolocalización
+import os #Borrar pantalla y chequear rutas 
 import pandas as pd #Leer csv
 import matplotlib.pyplot as plt #Mostrar graficos
 import cv2 #Analisis de imagen
@@ -196,8 +195,14 @@ def iterar_colores():
 
 def verificar_conexion(ruta):
     '''
-        Pre: Recibe la ruta, verifica la conexión a internet mediante un try y except
-        Post: Retorna un diccionario con un valor booleano en función de si hubo una conexión exitosa o no, y, la respuesta.    
+        Verifica que la URL responda correctamente o que el usuario
+        posea conexión a internet
+
+        #Parametros
+        ruta(str): URL a verificar
+        #Retorno
+        diccionario_respuesta(dicc): retorna un diccionario con una
+        key que representa la respuesta de URL y la otra con un valor booleano
     '''
     print("Conectando...")
     respuesta = None
@@ -388,10 +393,13 @@ def archivo_csv():
 
 def ubicar_provincia():
     '''
-        Post: Devuelve la provincia indicada mediante el diccionario, de tipo str
+        Le pide al usuario que ingrese la abreviatura de su provincia
+        y verifica que esta esté en el diccionario PROVINCIAS
+        #Retorno
+        provincia(str): El nombre de la provincia
     '''
-    print("Ingrese la abreviación de su provincia \nEjemplo: Buenos Aires se abrevia como BA, Catamarca como CA. \nIngrese aquí: ")
-    caracteres_provincia = input().upper()
+    print("Ingrese la abreviación de su provincia \nEjemplo: Buenos Aires se abrevia como BA, Catamarca como CA.")
+    caracteres_provincia = input("Ingrese aquí:").upper()
     while(len(caracteres_provincia) != 2 or caracteres_provincia not in PROVINCIAS):
         print("Ingreso erróneo o provincia inexistente, intente nuevamente")
         caracteres_provincia = input('Provincia: ').upper()
@@ -400,10 +408,16 @@ def ubicar_provincia():
 
 def geolocalizacion_por_nombre():
     """
-        Intenta definir la ubicacion del usuario usando geolocator, si falla devulve None.
-        Post: Retorna un diccionario.
-    """
-    lugar = input('Ingrese su ubicacion(EJEMPLO: Moreno, Ezeiza, Buenos Aires): ')
+        Le pide al usuario que ingrese el nombre de su ubicación,
+        se verifica que la ubicación exista y que también verifique si el servicio
+        esta funcionando correctamente
+        
+        #Retorno
+        diccionario(dicc): Si el servicio retorna None, se retornará un diccionario con
+        valores None, en caso contrario, se devolverá un diccionario valores de tipo string
+        con el nombre de la ciudad y provincia del usuario
+        """
+    lugar = input('Ingrese su ubicacion(EJEMPLO: Ezeiza, Buenos Aires): ')
     locacion = None
 
     try:
@@ -432,14 +446,21 @@ def geolocalizacion_por_nombre():
 
 def geolocalizacion_por_coordenadas():
     """
-        Post: Devuelve la ciudad y la provincia de una lat y long ingresados en un diccionario, ante un error retorna None
+       Le pide al usuario que ingrese la latitud y longitud
+       de su ubicación, verifica que haya sio correctamente ingresado
+       y luego hace la busqueda inversa. Se trabaja con el diccionario 
+       devuelto por la libreria
+
+        #Retorno
+        diccionario(dicc): Un diccionario que posee la el lugar, la ciudad y la provincia
+        como valores
     """
     print('Ingrese a continuacion las coordenadas')
     coordenadas_validas = False
     while not coordenadas_validas:
         try:
             latitud = float(input('Latitud: '))
-            if latitud <= 90 and latitud >= -90:
+            if latitud <= 90 or latitud >= -90:
                 longitud = float(input('Longitud: '))
                 coordenadas = (latitud, longitud)
                 coordenadas_validas = True
@@ -473,10 +494,15 @@ def geolocalizacion_por_coordenadas():
 
 def hallar_al_usuario_manualmente():
     '''
-        Pre: Ninguna, luego pide al usuario los datos de su localización
-        Post: Retorna un diccionario con la clave Ciudad y Provincia con los datos del usuario
+        En caso de que no funcione la librería geopy o el usuario halla ingresado
+        un nombre de ubicación inexistente, se utilizará esta funcion de repuesto,
+        A diferencia de las otras geolocalizaciones, esta será manual.
+        #Retorno
+        diccionario(str): Posee la ciudad y la provincia como claves
+        
     '''
-    print("A continuación ingrese la ubicación desde la cuál está usando nuestra aplicación, primero la abreviación de su provincia y luego su ciudad")
+    print("A continuación ingrese la ubicación desde la cuál está usando nuestra aplicación,")
+    print("primero la abreviatura de su provincia y luego su ciudad")
     provincia_usuario = ubicar_provincia()
     ciudad_usuario = input("Ingrese el nombre de la ciudad: ").title()
     ciudad_usuario = ciudad_usuario.replace("De", "de")
@@ -486,8 +512,10 @@ def hallar_al_usuario_manualmente():
 
 def hallar_usuario():
     """
-        Pre: Ninguna, permiter hallar la ubicacion por geolocalizacion, y, en caso de un fallo ingresando los datos manualmente
-        Post: Retorna, en ambos casos, un diccionario con la ciudad y provincia del usuario
+        Esta función estará activa hasta que el usuario ingrese su ubicación deseada
+        o la correcta.
+        #Retorno
+        ubicacion(dicc): Es el diccionario que contiene la ubicación del usuario
     """
     ubicacion_correcta = False
     while ubicacion_correcta == False:
@@ -513,14 +541,18 @@ def hallar_usuario():
             ubicacion_correcta = True
         else:
             borrar_pantalla()
-            print('Agregue informacion. Revise la escritura.\n')
+            print('Agregue información o revise la escritura.\n')
             ubicacion_correcta = False
     return ubicacion
 
 def verificar_ciudad(respuesta_json, ubicacion_usuario):
     '''
-        Pre: Recibe un json de la url weather y el diccionario con la ubicación del usuario, luego compara con los datos del json
-        Post: Retorna un valor booleano indicando si la ciudad estaba en los datos json o no
+        Verifica que el nombre de la ciudad del usuario esté en
+        la respuesta JSON de la URL del pronóstico extendido
+
+        #Retorno
+        ciudad_encontrada(bool): Booleano que determina si la ciudad 
+        está o no en el JSON
     '''
     ciudad_encontrada = False
     n_dic = 0
@@ -532,12 +564,15 @@ def verificar_ciudad(respuesta_json, ubicacion_usuario):
 
 def mostrar_pronostico_provincia(respuesta_json, provincia):
     '''
-        Pre:Recibe los datos json de la url weather y la provincia del usuario
-        Post:Ninguna, muestra el pronóstico general de la provincia indicada
+        Mostrará en pantalla todas las alertas a nivel provincial, en caso de que la
+        ciudad del usuario no figure en el JSON, además cuenta la cantidad
+        de iteraciones para saber cuantos avisos hay en esa provincia
+        #Parametros
+        respuesta_json(dicc): Diccionarios entregados por el JSON
+        provincia(str): El nombre de la provincia del usuario
     '''
-    contador = 1
     print("La ciudad no pudo ser encontrada en la base de datos del servicio metereológico, a continuación mostraremos las ciudades más cercanas")
-    for diccionarios in respuesta_json:
+    for (contador, diccionario) in enumerate(respuesta_json):
         if(diccionarios['province'] == provincia and len(respuesta_json)!= 0):
             print("-"*80)
             print(f"AVISOS A NIVEL PROVINCIAL. \n AVISO NÚMERO #{contador}")
@@ -548,12 +583,15 @@ def mostrar_pronostico_provincia(respuesta_json, provincia):
             print(f"Pronóstico de la mañana: {diccionarios['forecast']['forecast']['0']['morning']['description']}")
             print(f"Pronóstico de la tarde: {diccionarios['forecast']['forecast']['0']['afternoon']['description']}\n")
             print("-"*80)
-            contador += 1
 
 def mostrar_pronostico_ciudad(respuesta_json, ciudad, provincia):
     '''
-        Pre:Recibe los datos json de la url weather y la ciudad del usuario
-        Post: Muestra el pronóstico de la ciudad del usuario, debido a que fue encontrada en los datos json
+        Mostrará en pantalla las alertas de la ciudad del usuario 
+        o de la ciudad con el nombre más similar a ella.
+        #Parametros
+        respuesta_json(dicc): Diccionarios entregados por el JSON de la URL_ESTADO_ACTUAL
+        ciudad(str): El nombre de la ciudad del usuario
+        provincia(str): El nombre de la provincia del usuario
     '''
     lista = respuesta_json
     n_dic = 0 
@@ -575,8 +613,10 @@ def mostrar_pronostico_ciudad(respuesta_json, ciudad, provincia):
 
 def pronostico_usuario(ubicacion_usuario):
     '''
-        Pre: Recibe el diccionario con la ubicación del usuario
-        Post: Ninguno, sigue una serie de procesos para mostrar el pronóstico de la locación del usuario
+        Si la ciudad fue encontrada, se mostrarán en pantalla los correspondientes avisos
+        en caso de que no haya conexión con el SMN, se le avisará al usuario
+        #Parametros
+        ubicacion_usuario(dicc): Contiene la ubicación del usuario en los valores de las claves
     '''
     conexion = verificar_conexion(URL_ESTADO_ACTUAL) 
     conexion_exitosa = conexion['conexion']
@@ -594,34 +634,27 @@ def pronostico_usuario(ubicacion_usuario):
 
 def alertas_nacionales():
     '''
-        Pre:Ninguno, primero recibe los datos de la url indicada en el modulo y luego las muestra
-        Post:Niguno, muestra las alertas a nivel nacional
+        Muestra las alertas de la URL_ALERTAS que el archivo JSON
+        que entrega los avisos a nivel nacional, a veces el archivo 
+        JSON puede estar vacío, por lo cual se le indicará al usuario si no 
+        hay avisos por el momento
     '''
     conexion = verificar_conexion(URL_ALERTAS) 
-    conexion_exitosa= conexion['conexion']
-    
-    if conexion_exitosa == True:
-        respuesta_json = conexion['respuesta'].json()
-        contador = 1
+    conexion_exitosa = conexion['conexion']
+    respuesta_json = conexion['respuesta'].json()
 
-        if len(respuesta_json) != 0:
+    if (conexion_exitosa == True and len(respuesta_json) != 0):
+        print("-"*80)
+        print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO A NIVEL NACIONAL")
+        print("-"*80)
+        for (contador,alertas) in enumerate(respuesta_json):
+            zonas = [zona for zona in alertas['zones'].values()]
             print("-"*80)
-            print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO A NIVEL NACIONAL")
+            print(f"AVISO NÚMERO°{contador}")
             print("-"*80)
-            for alertas in respuesta_json:
-                zonas = [zona for zona in alertas['zones'].values()]
-                print("-"*80)
-                print(f"AVISO NÚMERO°{contador}")
-                print("-"*80)
-                print(f"Titulo: {alertas['title']} \nFecha: {alertas['date']} \nHora: {alertas['hour']}")
-                print(f"Aviso: {alertas['description']} \n Zonas afectadas: {zonas[0::]}")
-                print("-"*80)
-                contador += 1
-        else:
-            print("-"*80, "\n")
-            print("NO HAY ALERTAS ACTUALES")
-            print("-"*80, "\n")
-
+            print(f"Titulo: {alertas['title']} \nFecha: {alertas['date']} \nHora: {alertas['hour']}")
+            print(f"Aviso: {alertas['description']} \n Zonas afectadas: {zonas[0::]}")
+            print("-"*80)
     else:
         print('No se pudo establecer conexion con el Servicio Meteorológico Nacional.')
         print("-"*80, "\n")
@@ -630,8 +663,14 @@ def alertas_nacionales():
 
 def mostrar_pronostico_extendido_ciudad(respuesta_json, ciudad, provincia, dia_pronostico):
     '''
-        Pre:Recibe los datos json de la url de pronosticos extendidos, la ciudad del usuario y el numero de dias desde la fecha.
-        Post: Muestra el pronostico extendido de la ciudad del usuario, debido a que fue encontrada en los datos json
+        Mostrará en pantalla los pronósticos extendidos
+         de la ciudad del usuario o de la ciudad
+        con el nombre más similar a ella.
+        #Parametros
+        respuesta_json(dicc): Diccionarios entregados por el JSON de la URL_P_EXTENDIDO
+        ciudad(str): El nombre de la ciudad del usuario
+        provincia(str): El nombre de la provincia del usuario
+        dia_pronostico(int): El día del pronóstico extendido
     '''
     for diccionario in respuesta_json:
         if(ciudad == diccionario['name'] and provincia == diccionario['province']):
@@ -653,8 +692,15 @@ def mostrar_pronostico_extendido_ciudad(respuesta_json, ciudad, provincia, dia_p
 
 def pronostico_extendido(ubicacion_usuario):
     '''
-        Pre: Recibe el diccionario con la ubicación del usuario
-        Post: Ninguno, sigue una serie de procesos para mostrar el pronóstico extendido de la locación del usuario
+        Itera las URL de los pronósticos extendidos,
+        si la ciudad del usuario no está en el archivo JSON,
+        se le indicará al usuario que no hay información disponible.
+        Si falla la conexión con alguna de las URLS, también se le avisará al 
+        usuario
+
+        #Parametros
+        ubicacion_usuario(dicc): Un diccionario que posee como valores
+        la ciudad y la provincia del usuario
     '''
     contador = 1
     for ruta in URLS_P_EXTENDIDO:
@@ -677,8 +723,18 @@ def pronostico_extendido(ubicacion_usuario):
 
 def mostrar_alertas(ubicacion_usuario):
     '''
-        Pre: Recibe la localizacion 
-        Post: Muestra las alertas para la localizacion ingresada
+        Itera la URL de Alertas a nivel nacional para
+        luego ver si la provincia del usuario está dentro de las zonas
+        afectadas por una tormenta o clima poco habitual.
+        En caso de que no existan alertas, se le indicará al usuario en pantalla,
+        también si no hubo conexión con el SMN.
+        #Nota
+        # diccionario['zones'] entrega las zonas afectadas
+
+        # Parametros
+        ubicacion_usuario(dicc): Un diccionario que posee como valores
+        la ciudad y la provincia del usuario
+
     '''
     conexion = verificar_conexion(URL_ALERTAS) 
     conexion_exitosa= conexion['conexion']
@@ -686,7 +742,6 @@ def mostrar_alertas(ubicacion_usuario):
     if conexion_exitosa == True:
         respuesta_json = conexion['respuesta'].json()
         localizacion = ubicacion_usuario['Provincia']
-
         contador = 1
         for diccionario in respuesta_json:
             for region in diccionario['zones']:
