@@ -488,6 +488,8 @@ def geolocalizacion_por_coordenadas():
                 provincia = ubicacion['address']['state']
             if 'city' in ubicacion['address']:
                 ciudad = ubicacion['address']['city']
+            elif "city" not in ubicacion["address"] and "town" in ubicacion["address"]:
+                ciudad = ubicacion["address"]["town"]
 
     diccionario = {'Ciudad': ciudad, 'Provincia': provincia, 'Lugar': locacion}
     return diccionario
@@ -545,22 +547,23 @@ def hallar_usuario():
             ubicacion_correcta = False
     return ubicacion
 
-def verificar_ciudad(respuesta_json, ubicacion_usuario):
+def verificar_ciudad(respuesta_json, ciudad, provincia):
     '''
-        Verifica que el nombre de la ciudad del usuario esté en
-        la respuesta JSON de la URL del pronóstico extendido
-
-        #Retorno
-        ciudad_encontrada(bool): Booleano que determina si la ciudad 
-        está o no en el JSON
+        Pre: Recibe un json de la url weather, la ciudad y la provincia del usuario
+        Post: Retorna una lista de diccionarios. Esta, contiene un solo diccionarion si se encotro la ciudad exacta, 
+              o, los diccionarios de todas las ciudades parecidas en la misma provincia
     '''
     ciudad_encontrada = False
+    lista = []
     n_dic = 0
     while ciudad_encontrada == False and n_dic < len(respuesta_json):
-        if ubicacion_usuario["Ciudad"] in respuesta_json[n_dic]["name"]:
+        if ciudad == respuesta_json[n_dic]["name"] and provincia == respuesta_json[n_dic]["province"]:
+            lista = [respuesta_json[n_dic]]
             ciudad_encontrada = True
+        elif ciudad in respuesta_json[n_dic]['name'] and provincia == respuesta_json[n_dic]["province"]:
+            lista.append(respuesta_json[n_dic])
         n_dic += 1
-    return ciudad_encontrada
+    return lista
 
 def mostrar_pronostico_provincia(respuesta_json, provincia):
     '''
@@ -584,32 +587,24 @@ def mostrar_pronostico_provincia(respuesta_json, provincia):
             print(f"Pronóstico de la tarde: {diccionarios['forecast']['forecast']['0']['afternoon']['description']}\n")
             print("-"*80)
 
-def mostrar_pronostico_ciudad(respuesta_json, ciudad, provincia):
+def mostrar_pronostico_ciudad(lista_pronosticos):
     '''
-        Mostrará en pantalla las alertas de la ciudad del usuario 
-        o de la ciudad con el nombre más similar a ella.
+        Pre: Recibe una lista que contiene al menos un diccionario proveniente de los datos json de la url weather
+        Post: Muestra el pronostico da la o las ciudades
         #Parametros
-        respuesta_json(dicc): Diccionarios entregados por el JSON de la URL_ESTADO_ACTUAL
-        ciudad(str): El nombre de la ciudad del usuario
-        provincia(str): El nombre de la provincia del usuario
+        lista_pronosticos, lista. Compuesta por diccionarions
     '''
-    lista = respuesta_json
-    n_dic = 0 
-    ciudad_encontrada = False
-    while ciudad_encontrada == False and n_dic < len(respuesta_json):
-        if ciudad in lista[n_dic]['name'] and provincia == lista[n_dic]['province']:
-            print("-"*80)
-            print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO DE LA CIUDAD DE: {lista[n_dic]['name']}")
-            print("-"*80)
-            print(f"Fecha y Hora: {lista[n_dic]['forecast']['date_time']}")
-            print(f"Temperatura mínima: {lista[n_dic]['forecast']['forecast']['0']['temp_min']}°C")
-            print(f"Temperatura máxima: {lista[n_dic]['forecast']['forecast']['0']['temp_max']}°C")
-            print(f"Humedad: {lista[n_dic]['weather']['humidity']}% \nVelocidad del viento: {lista[n_dic]['weather']['wind_speed']} km/h")
-            print(f"Pronóstico de la mañana: {lista[n_dic]['forecast']['forecast']['0']['morning']['description']}")
-            print(f"Pronóstico de la tarde: {lista[n_dic]['forecast']['forecast']['0']['afternoon']['description']}\n")
-            print("-"*80)
-            ciudad_encontrada = True
-        n_dic += 1
+    for ciudad in lista_pronosticos:
+        print("-"*80)
+        print(f"A CONTINUACIÓN SE DARÁ EL PRONÓSTICO DE LA CIUDAD DE: {ciudad['name']}")
+        print("-"*80)
+        print(f"Fecha y Hora: {ciudad['forecast']['date_time']}")
+        print(f"Temperatura mínima: {ciudad['forecast']['forecast']['0']['temp_min']}°C")
+        print(f"Temperatura máxima: {ciudad['forecast']['forecast']['0']['temp_max']}°C")
+        print(f"Humedad: {ciudad['weather']['humidity']}% \nVelocidad del viento: {ciudad['weather']['wind_speed']} km/h")
+        print(f"Pronóstico de la mañana: {ciudad['forecast']['forecast']['0']['morning']['description']}")
+        print(f"Pronóstico de la tarde: {ciudad['forecast']['forecast']['0']['afternoon']['description']}\n")
+        print("-"*80)
 
 def pronostico_usuario(ubicacion_usuario):
     '''
@@ -623,12 +618,15 @@ def pronostico_usuario(ubicacion_usuario):
 
     if conexion_exitosa == True:
         respuesta_json = conexion['respuesta'].json()
-        ciudad_verificada = verificar_ciudad(respuesta_json, ubicacion_usuario)
+        ciudad_verificada = verificar_ciudad(respuesta_json, ubicacion_usuario['Ciudad'], ubicacion_usuario['Provincia'])
 
-        if ciudad_verificada == False:
+        if len(ciudad_verificada) == 0:
             mostrar_pronostico_provincia(respuesta_json, ubicacion_usuario['Provincia'])
+        elif len(ciudad_verificada) == 1:
+            mostrar_pronostico_ciudad(ciudad_verificada)
         else:
-            mostrar_pronostico_ciudad(respuesta_json, ubicacion_usuario['Ciudad'], ubicacion_usuario['Provincia'])
+            print('No se encontró la ciudad exacta\nSe encontraron las siguientes ciudades\n')
+            mostrar_pronostico_ciudad(ciudad_verificada)
     else:
         print('No se pudo establecer conexion con el Servicio Meteorológico Nacional.')
 
@@ -661,33 +659,22 @@ def alertas_nacionales():
         print("NO HAY ALERTAS ACTUALES")
         print("-"*80, "\n")
 
-def mostrar_pronostico_extendido_ciudad(respuesta_json, ciudad, provincia, dia_pronostico):
+def mostrar_pronostico_extendido_ciudad(lista_pronostico, dia_pronostico):
     '''
-        Mostrará en pantalla los pronósticos extendidos
-         de la ciudad del usuario o de la ciudad
-        con el nombre más similar a ella.
+        Pre: Recibe una lista de diccionarios y el numero de dias desde la fecha.
+        Post: Mostrará en pantalla los pronósticos extendidos de la ciudad del usuario o de la ciudad
+              con el nombre más similar a ella.
         #Parametros
-        respuesta_json(dicc): Diccionarios entregados por el JSON de la URL_P_EXTENDIDO
-        ciudad(str): El nombre de la ciudad del usuario
-        provincia(str): El nombre de la provincia del usuario
+        lista_pronostico: Lista de diccionarios provenientes del JSON de la URL_P_EXTENDIDO
         dia_pronostico(int): El día del pronóstico extendido
     '''
-    for diccionario in respuesta_json:
-        if(ciudad == diccionario['name'] and provincia == diccionario['province']):
-            print("-"*80)
-            print(f"PRONÓSTICO PARA DENTRO DE {dia_pronostico} DÍAS DE LA CIUDAD DE: {ciudad}")
-            print("-"*80)
-            print(f'MAÑANA:\nTemperatura: {diccionario["weather"]["morning_temp"]}°C\nDescripción: {diccionario["weather"]["morning_desc"]}')
-            print(f'TARDE:\nTemperatura: {diccionario["weather"]["afternoon_temp"]}°C\nDescripción: {diccionario["weather"]["afternoon_desc"]}')
-            print("-"*80,'\n')
-        elif(ciudad in diccionario['name'] and provincia == diccionario['province']):
-            print("-"*80)
-            print(f"No sé encontró la ciudad exacta pero lo más parecido es la ciudad de {diccionario['name']}")
-            print(f"PRONÓSTICO PARA DENTRO DE {dia_pronostico} DÍAS DE LA CIUDAD DE: {ciudad}")
-            print("-"*80)
-            print(f'MAÑANA:\nTemperatura: {diccionario["weather"]["morning_temp"]}\nDescripción: {diccionario["weather"]["morning_desc"]}')
-            print(f'TARDE:\nTemperatura: {diccionario["weather"]["afternoon_temp"]}\nDescripción: {diccionario["weather"]["afternoon_desc"]}')
-            print("-"*80,'\n')
+    for ciudad in lista_pronostico:
+        print("-"*80)
+        print(f"PRONÓSTICO PARA DENTRO DE {dia_pronostico} DÍAS DE LA CIUDAD DE: {ciudad['name']}")
+        print("-"*80)
+        print(f'MAÑANA:\nTemperatura: {ciudad["weather"]["morning_temp"]}°C\nDescripción: {ciudad["weather"]["morning_desc"]}')
+        print(f'TARDE:\nTemperatura: {ciudad["weather"]["afternoon_temp"]}°C\nDescripción: {ciudad["weather"]["afternoon_desc"]}')
+        print("-"*80,'\n')
 
 
 def pronostico_extendido(ubicacion_usuario):
@@ -709,13 +696,15 @@ def pronostico_extendido(ubicacion_usuario):
 
         if conexion_exitosa == True:
             respuesta_json = conexion['respuesta'].json()
-            ciudad_verificada = verificar_ciudad(respuesta_json, ubicacion_usuario)
+            ciudad_verificada = verificar_ciudad(respuesta_json, ubicacion_usuario['Ciudad'], ubicacion_usuario['Provincia'])
 
-            if ciudad_verificada == False:
+            if len(ciudad_verificada) == 0:
                 print(f'No hay información disponible para {ubicacion_usuario["Ciudad"]}')
+            elif len(ciudad_verificada) == 1:
+                mostrar_pronostico_extendido_ciudad(ciudad_verificada, contador)
             else:
-                mostrar_pronostico_extendido_ciudad(respuesta_json, ubicacion_usuario['Ciudad'], ubicacion_usuario['Provincia'], contador)
-
+                print('No se encontró la ciudad exacta\nSe encontraron las siguientes ciudades\n')
+                mostrar_pronostico_extendido_ciudad(ciudad_verificada, contador)
         else:
             print(f'Fallo la conexión para el pronóstico de dentro de {contador} días')
 
