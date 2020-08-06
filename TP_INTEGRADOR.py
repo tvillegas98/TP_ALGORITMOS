@@ -1,13 +1,13 @@
-import requests #URL
-import os #Borrar pantalla y chequear rutas 
-import pandas as pd #Leer csv
-import matplotlib.pyplot as plt #Mostrar graficos
-import cv2 #Analisis de imagen
-import numpy as np #Analisis de imagen
-from geopy.exc import GeocoderServiceError #Excepciones
-from geopy.distance import geodesic #Medir distancias
-from geopy.geocoders import Nominatim #Geolocalización
-from matplotlib.ticker import MultipleLocator #Arreglar ejes de grafico
+import os  # Borrar pantalla y chequear rutas
+import cv2  # Analisis de imagen
+import matplotlib.pyplot as plt  # Mostrar graficos
+import numpy as np  # Analisis de imagen
+import pandas as pd  # Leer csv
+import requests  # URL
+from geopy.distance import geodesic  # Medir distancias
+from geopy.exc import GeocoderServiceError  # Excepciones
+from geopy.geocoders import Nominatim  # Geolocalización
+from matplotlib.ticker import MultipleLocator  # Arreglar ejes de grafico
 
 GEOLOCATOR = Nominatim(user_agent = 'TP_ALGORITMOS')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -489,13 +489,18 @@ def geolocalizacion_por_nombre():
     provincia = None
     ciudad = None
     ubicacion = locacion.raw
-    if "address" in ubicacion:
-        if "state" in ubicacion["address"]:
-            provincia = ubicacion['address']['state']
-        if "city" in ubicacion["address"]:
-            ciudad = ubicacion["address"]["city"]
-        elif "city" not in ubicacion["address"] and "village" in ubicacion["address"]:
-            ciudad = ubicacion["address"]["village"]
+    if ubicacion != None:
+        if 'address' in ubicacion:
+            if 'state' in ubicacion['address']:
+                provincia = ubicacion['address']['state']
+            elif 'city' in ubicacion['address']:
+                provincia = ubicacion['address']['city']
+            if 'suburb' in ubicacion['address']:
+                ciudad = ubicacion['address']['suburb']
+            elif 'city' in ubicacion["address"]:
+                ciudad = ubicacion['address']['city']
+            elif 'town' in ubicacion['address']:
+                ciudad = ubicacion['address']['city']
     diccionario = {'Ciudad': ciudad, 'Provincia': provincia, 'Lugar': locacion}
     return diccionario
 
@@ -541,11 +546,16 @@ def geolocalizacion_por_coordenadas():
         if 'address' in ubicacion:
             if 'state' in ubicacion['address']:
                 provincia = ubicacion['address']['state']
-            if 'city' in ubicacion['address']:
+            elif 'city' in ubicacion['address']:
+                provincia = ubicacion['address']['city']
+            if 'suburb' in ubicacion['address']:
+                ciudad = ubicacion['address']['suburb']
+            elif 'city' in ubicacion["address"]:
                 ciudad = ubicacion['address']['city']
-            elif "city" not in ubicacion["address"] and "town" in ubicacion["address"]:
-                ciudad = ubicacion["address"]["town"]
-
+            elif 'town' in ubicacion['address']:
+                ciudad = ubicacion['address']['city']
+    if(provincia == 'Ciudad de Buenos Aires'):
+        provincia = 'Buenos Aires'
     diccionario = {'Ciudad': ciudad, 'Provincia': provincia, 'Lugar': locacion}
     return diccionario
 
@@ -637,8 +647,8 @@ def mostrar_pronostico_provincia(respuesta_json, provincia):
         respuesta_json(dicc): Diccionarios entregados por el JSON
         provincia(str): El nombre de la provincia del usuario
     '''
-    print("La ciudad no pudo ser encontrada en la base de datos del servicio metereológico, a continuación mostraremos las ciudades más cercanas")
-    for (contador, diccionario) in enumerate(respuesta_json):
+    contador = 1
+    for diccionarios in respuesta_json:
         if(diccionarios['province'] == provincia and len(respuesta_json)!= 0):
             print("-"*80)
             print(f"AVISOS A NIVEL PROVINCIAL. \n AVISO NÚMERO #{contador}")
@@ -649,7 +659,9 @@ def mostrar_pronostico_provincia(respuesta_json, provincia):
             print(f"Pronóstico de la mañana: {diccionarios['forecast']['forecast']['0']['morning']['description']}")
             print(f"Pronóstico de la tarde: {diccionarios['forecast']['forecast']['0']['afternoon']['description']}\n")
             print("-"*80)
-
+            contador += 1
+    print("La ciudad no pudo ser encontrada en la base de datos del servicio metereológico")
+    print("Se mostraron alertas a nivel provincial")
 def mostrar_pronostico_ciudad(lista_pronosticos):
     '''
         Recibe una lista que contiene al menos un diccionario proveniente de los datos json de la url weather.
@@ -844,9 +856,8 @@ def main():
         cerrar_menu = False
         ubicacion_usuario = hallar_usuario()
         borrar_pantalla()
-        print(f'UBICACIÓN: {ubicacion_usuario["Ciudad"]}, {ubicacion_usuario["Provincia"]}')
-
         while cerrar_menu == False:
+            print(f'UBICACIÓN: {ubicacion_usuario["Ciudad"]}, {ubicacion_usuario["Provincia"]}')
             print("\n¿Que desea hacer?")
             print("1.Ver el pronóstico para su ciudad(En caso de no haber para su ciudad, se mostrarán las ciudades mas cercanas)")
             print("2.Ver el pronóstico de una ciudad ubicada por geolocalización")
