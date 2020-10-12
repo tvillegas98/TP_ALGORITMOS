@@ -35,7 +35,7 @@ dos ciudades en la imagen, solo busque la distancia real.
 La distancia real entre Viedma y Neuquen es de: 556,1km  
 Por regla de tres simples puedo decir  
 
-556,1km_____170.9853795(Coordenadas de pixeles)
+556,1km_____170.9853795(Coordenadas de pixeles)  
 100km____30.747223602(distancia de pixeles)  
 
 Ahora para verificar que tan eficiente es
